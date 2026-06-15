@@ -46,7 +46,7 @@ def tts_builtin_non_stream():
     print("内置语音（非流式）已保存到 output_builtin.wav")
 
 # chat 基础函数
-def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_tokens=2048):
+def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_tokens=2048, response_format=None):
     """与 MiMo 进行对话
 
     Args:
@@ -55,31 +55,31 @@ def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_t
         model (str, optional): 模型名称，默认 "mimo-v2.5"
         temperature (float, optional): 温度参数，默认 0.5
         max_tokens (int, optional): 最大 token 数，默认 2048
+        response_format (dict, optional): 响应格式，如 {"type": "json_object"} 强制 JSON 输出
 
     Returns:
         str: 模型回复内容，失败返回 None
     """
     try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": system_message,
-                },
-                {
-                    "role": "user",
-                    "content": user_message,
-                }
+        params = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message}
             ],
-            max_completion_tokens=max_tokens,
-            temperature=temperature,
-            top_p=0.95,
-            stream=False,
-            stop=None,
-            frequency_penalty=0,
-            presence_penalty=0
-        )
+            "max_completion_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": 0.95,
+            "stream": False,
+            "frequency_penalty": 0,
+            "presence_penalty": 0
+        }
+
+        # 添加 response_format（如果支持）
+        if response_format:
+            params["response_format"] = response_format
+
+        completion = client.chat.completions.create(**params)
         return completion.choices[0].message.content
 
     except Exception as e:
@@ -88,76 +88,104 @@ def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_t
 
 
 # ========== 英语单词解释 ==========
-VOCAB_SYSTEM_PROMPT = """You are an English vocabulary expert. Your task is to provide detailed word explanations in a structured format.
+VOCAB_SYSTEM_PROMPT = """You are an English vocabulary expert. You MUST respond with ONLY a valid JSON object, no other text.
 
-For each word, you MUST return EXACTLY this JSON format:
+EXAMPLE for word "hello":
 {
-  "word": "the word",
-  "phonetic": "/phonetic transcription/",
+  "word": "hello",
+  "phonetic": "/həˈloʊ/",
   "definitions": [
     {
-      "pos": "part of speech (n./v./adj./adv./prep./conj.)",
-      "meaning": "Chinese meaning",
-      "english": "English explanation"
+      "pos": "interj.",
+      "meaning": "你好；喂",
+      "english": "used as a greeting or to begin a phone conversation"
     }
   ],
   "phrases": [
-    {
-      "phrase": "common phrase",
-      "meaning": "Chinese translation"
-    }
+    {"phrase": "say hello", "meaning": "打招呼"},
+    {"phrase": "hello there", "meaning": "你好啊"}
   ],
   "examples": [
     {
-      "sentence": "Example sentence preferably from movies/TV shows",
-      "source": "Movie/TV show name (Year)",
-      "translation": "Chinese translation"
+      "sentence": "Hello, my name is Inigo Montoya.",
+      "source": "The Princess Bride (1987)",
+      "translation": "你好，我叫伊尼戈·蒙托亚。"
+    },
+    {
+      "sentence": "I just wanted to say hello.",
+      "source": "Forrest Gump (1994)",
+      "translation": "我只是想打个招呼。"
+    },
+    {
+      "sentence": "Hello? Is anybody there?",
+      "source": "Cast Away (2000)",
+      "translation": "喂？有人在吗？"
     }
   ]
 }
 
-Rules:
-1. Return ONLY the JSON, no other text
-2. Include 1-3 most common definitions
-3. Include 3-6 common phrases
-4. Include 3 example sentences, preferably from famous movies or TV shows
-5. All Chinese translations should be accurate
-6. Phonetic transcription should use IPA format"""
+RULES:
+1. Response MUST be valid JSON only - no markdown, no code blocks, no explanation
+2. JSON must start with { and end with }
+3. Include 1-3 definitions, 3-6 phrases, 3 examples
+4. Examples preferably from movies/TV shows with source name and year
+5. Use IPA format for phonetic transcription"""
 
 
-def explain_word(word):
+def explain_word(word, max_retries=3):
     """获取英语单词的详细解释
 
     Args:
         word (str): 要查询的英语单词
+        max_retries (int): 最大重试次数，默认 3
 
     Returns:
         dict: 包含单词信息的字典，失败返回 None
     """
     import json
+    import re
 
-    response = chat(
-        system_message=VOCAB_SYSTEM_PROMPT,
-        user_message=f"Please explain the word: {word}",
-        temperature=0.3
-    )
+    for attempt in range(max_retries):
+        response = chat(
+            system_message=VOCAB_SYSTEM_PROMPT,
+            user_message=f"Explain the word: {word}",
+            temperature=0.1 + attempt * 0.1,
+            response_format={"type": "json_object"}  # 强制 JSON 输出
+        )
 
-    if not response:
-        return None
+        if not response:
+            continue
 
-    try:
-        # 尝试解析 JSON
-        # 处理可能的 markdown 代码块
+        # 清理响应（使用 response_format 后通常不需要额外清理）
         json_str = response.strip()
+
+        # 移除可能的 markdown 代码块（兼容处理）
         if json_str.startswith("```"):
-            json_str = json_str.split("\n", 1)[1]
+            json_str = json_str.split("\n", 1)[1] if "\n" in json_str else json_str[3:]
             json_str = json_str.rsplit("```", 1)[0]
 
-        return json.loads(json_str)
-    except json.JSONDecodeError as e:
-        print(f"❌ JSON 解析失败: {e}")
-        print(f"原始响应: {response}")
-        return None
+        # 尝试提取 JSON 对象
+        match = re.search(r'\{[\s\S]*\}', json_str)
+        if match:
+            json_str = match.group()
+
+        # 尝试修复常见的 JSON 格式问题
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*]', ']', json_str)
+
+        try:
+            result = json.loads(json_str)
+            # 验证必要字段
+            if "word" in result and ("definitions" in result or "phrases" in result):
+                return result
+            else:
+                print(f"⚠️ 响应缺少必要字段 (尝试 {attempt + 1}/{max_retries})")
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON 解析失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                print(f"原始响应: {response[:500]}...")
+
+    return None
 
 
 
