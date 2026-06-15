@@ -82,6 +82,49 @@
             font-style: italic;
         }
 
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-btn.playing {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(102, 126, 234, 0); }
+        }
+
+        .created-time {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #999;
+            text-align: right;
+        }
+
         .section {
             margin-bottom: 30px;
         }
@@ -405,6 +448,7 @@
                 <div class="word-header">
                     <div class="word">${data.word}</div>
                     <div class="phonetic">${data.phonetic || ''}</div>
+                    <button class="play-btn" onclick="playAudio('${data.word}', this)" title="播放发音">▶</button>
                 </div>
             `;
 
@@ -457,6 +501,13 @@
                 `;
             }
 
+            // 添加时间
+            if (data.created_at_str) {
+                html += `
+                    <div class="created-time">📅 添加于 ${data.created_at_str}</div>
+                `;
+            }
+
             document.getElementById('content').innerHTML = html;
             document.getElementById('content').style.display = 'block';
         }
@@ -465,6 +516,28 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+
+        // 播放音频
+        let currentAudio = null;
+        function playAudio(word, btn) {
+            if (currentAudio) {
+                currentAudio.pause();
+                document.querySelectorAll('.play-btn.playing').forEach(b => b.classList.remove('playing'));
+            }
+
+            const audio = new Audio(`/api/audio/${encodeURIComponent(word)}`);
+            currentAudio = audio;
+            btn.classList.add('playing');
+
+            audio.play().catch(err => {
+                console.error('播放失败:', err);
+                btn.classList.remove('playing');
+            });
+
+            audio.addEventListener('ended', () => {
+                btn.classList.remove('playing');
+            });
         }
 
         // 初始化

@@ -18,12 +18,13 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from util.mimo import explain_word
+from util.audio import get_audio
 
 app = Flask(__name__)
 
 PORT = int(os.getenv("PORT", 8076))
 AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "anki2024")
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), 'data'))
 
 
 def check_auth(password):
@@ -72,6 +73,15 @@ def get_word(word):
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+            # 读取 meta.json 获取时间戳
+            meta_path = os.path.join(word_dir, "meta.json")
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    meta = json.load(f)
+                    data['created_at'] = meta.get('created_at', 0)
+                    data['created_at_str'] = meta.get('created_at_str', '')
+            # 确保音频也已缓存
+            get_audio(word, DATA_DIR)
             return jsonify({"status": "ok", "data": data, "source": "cache"})
         except Exception as e:
             return jsonify({"status": "error", "message": f"读取缓存失败: {str(e)}"}), 500
@@ -90,17 +100,37 @@ def get_word(word):
 
         # 保存 meta.json（包含时间戳）
         meta_path = os.path.join(word_dir, "meta.json")
+        created_at = time.time()
+        created_at_str = time.strftime("%Y-%m-%d %H:%M:%S")
         meta_data = {
             "word": word,
-            "created_at": time.time(),
-            "created_at_str": time.strftime("%Y-%m-%d %H:%M:%S")
+            "created_at": created_at,
+            "created_at_str": created_at_str
         }
         with open(meta_path, 'w', encoding='utf-8') as f:
             json.dump(meta_data, f, ensure_ascii=False, indent=2)
+        result['created_at'] = created_at
+        result['created_at_str'] = created_at_str
     except Exception as e:
         print(f"保存缓存失败: {e}")
 
+    # 下载并缓存发音音频
+    get_audio(word, DATA_DIR)
+
     return jsonify({"status": "ok", "data": result, "source": "api"})
+
+
+@app.route("/api/audio/<word>", methods=["GET"])
+@require_auth
+def get_word_audio(word):
+    """获取单词发音音频"""
+    word = word.lower().strip()
+    data = get_audio(word, DATA_DIR)
+
+    if not data:
+        return jsonify({"status": "error", "message": "音频获取失败"}), 500
+
+    return Response(data, mimetype="audio/mpeg")
 
 
 @app.route("/words", methods=["GET"])
@@ -177,6 +207,72 @@ def get_words_list():
         return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({"status": "ok", "data": words})
+
+
+@app.route("/api/config", methods=["GET"])
+@require_auth
+def get_config():
+    """获取当前配置"""
+    return jsonify({
+        "status": "ok",
+        "data": {
+            "data_dir": DATA_DIR
+        }
+    })
+
+
+@app.route("/api/config", methods=["POST"])
+@require_auth
+def update_config():
+    """更新配置（保存到 .env 文件）"""
+    global DATA_DIR
+
+    new_data_dir = request.json.get("data_dir", "").strip()
+    if not new_data_dir:
+        return jsonify({"status": "error", "message": "数据目录不能为空"}), 400
+
+    # 如果是相对路径，转为绝对路径
+    if not os.path.isabs(new_data_dir):
+        new_data_dir = os.path.abspath(new_data_dir)
+
+    # 创建目录
+    try:
+        os.makedirs(new_data_dir, exist_ok=True)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"创建目录失败: {str(e)}"}), 400
+
+    # 更新 .env 文件
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    _update_env_file(env_path, "DATA_DIR", new_data_dir)
+
+    # 更新运行时变量
+    DATA_DIR = new_data_dir
+
+    return jsonify({
+        "status": "ok",
+        "message": "配置已保存",
+        "data": {"data_dir": DATA_DIR}
+    })
+
+
+def _update_env_file(env_path, key, value):
+    """更新 .env 文件中的键值"""
+    lines = []
+    found = False
+
+    if os.path.exists(env_path):
+        with open(env_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+    with open(env_path, 'w', encoding='utf-8') as f:
+        for line in lines:
+            if line.strip().startswith(f"{key}="):
+                f.write(f"{key}={value}\n")
+                found = True
+            else:
+                f.write(line)
+        if not found:
+            f.write(f"{key}={value}\n")
 
 
 if __name__ == "__main__":

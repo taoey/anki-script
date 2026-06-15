@@ -31,10 +31,15 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
-        .nav-link {
+        .top-bar {
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
             padding: 10px 20px;
             background: rgba(255,255,255,0.2);
             color: white;
@@ -48,6 +53,140 @@
         .nav-link:hover {
             background: white;
             color: #667eea;
+        }
+
+        .settings-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .settings-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.4rem;
+        }
+
+        .modal label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .modal input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .modal input[type="text"]:focus {
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .modal-actions .btn-cancel {
+            padding: 10px 24px;
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .modal-actions .btn-cancel:hover {
+            background: #bdbdbd;
+        }
+
+        .modal-actions .btn-save {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .modal-actions .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .modal-hint {
+            margin-top: 8px;
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        .modal-toast {
+            display: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .modal-toast.success {
+            display: block;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .modal-toast.error {
+            display: block;
+            background: #ffebee;
+            color: #c62828;
         }
 
         body {
@@ -279,7 +418,25 @@
     </style>
 </head>
 <body>
-    <a href="/words" class="nav-link">📖 单词列表</a>
+    <div class="top-bar">
+        <a href="/words" class="nav-link">📖 单词列表</a>
+        <button class="settings-btn" onclick="openSettings()">配置</button>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>⚙️ 设置</h2>
+            <label for="dataDir">数据存储目录</label>
+            <input type="text" id="dataDir" placeholder="数据目录路径">
+            <p class="modal-hint">💡 默认为项目下的 data 目录，支持绝对路径或相对路径</p>
+            <div id="settingsToast" class="modal-toast"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn-save" onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <h1>📚 英语单词查询</h1>
 
@@ -400,6 +557,58 @@
         function showError(message) {
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+
+        // 设置相关
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            const toast = document.getElementById('settingsToast');
+            toast.className = 'modal-toast';
+            modal.classList.add('show');
+
+            // 加载当前配置
+            fetch('/api/config')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        document.getElementById('dataDir').value = data.data.data_dir || '';
+                    }
+                });
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        // 点击遮罩关闭
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
+
+        function saveSettings() {
+            const dataDir = document.getElementById('dataDir').value.trim();
+            const toast = document.getElementById('settingsToast');
+
+            fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data_dir: dataDir })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    toast.className = 'modal-toast success';
+                    toast.textContent = '✅ ' + data.message;
+                    setTimeout(() => closeSettings(), 1500);
+                } else {
+                    toast.className = 'modal-toast error';
+                    toast.textContent = '❌ ' + (data.message || '保存失败');
+                }
+            })
+            .catch(() => {
+                toast.className = 'modal-toast error';
+                toast.textContent = '❌ 网络错误，请重试';
+            });
         }
     </script>
 </body>

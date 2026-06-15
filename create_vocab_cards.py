@@ -4,7 +4,7 @@
 卡片模板：正面显示单词，背面显示全部信息
 """
 
-import importlib.util, os, urllib.request, time
+import importlib.util, os, time
 
 _spec = importlib.util.spec_from_file_location("ankiconnect", os.path.join(os.path.dirname(__file__), "ankiconnect.py"))
 _mod = importlib.util.module_from_spec(_spec)
@@ -14,34 +14,9 @@ AnkiConnect = _mod.AnkiConnect
 # 音频本地缓存目录
 AUDIO_DIR = os.path.join(os.path.dirname(__file__), "data")
 
-
-def get_audio(word):
-    """获取单词发音音频，优先读本地缓存，否则从 Google TTS 下载并缓存
-
-    Returns:
-        mp3 bytes，失败返回 None
-    """
-    os.makedirs(AUDIO_DIR, exist_ok=True)
-    local_path = os.path.join(AUDIO_DIR, f"{word}.mp3")
-
-    # 本地已有缓存
-    if os.path.exists(local_path):
-        with open(local_path, "rb") as f:
-            return f.read()
-
-    # 从 Google TTS 下载
-    url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q={word}&tl=en"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = resp.read()
-        # 存入本地缓存
-        with open(local_path, "wb") as f:
-            f.write(data)
-        return data
-    except Exception as e:
-        print(f"   ⚠️  音频下载失败 [{word}]: {e}")
-        return None
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+from util.audio import get_audio
 
 MODEL_NAME = "VocabCard2"
 DECK_NAME = "英语::单词"
@@ -236,7 +211,7 @@ def main():
         word_text = word["Front"]
 
         # 获取音频（优先本地缓存）并存入 Anki 媒体库
-        audio_data = get_audio(word_text)
+        audio_data = get_audio(word_text, AUDIO_DIR)
         if audio_data:
             audio_file = f"{word_text}.mp3"
             anki.store_media(audio_file, audio_data)
