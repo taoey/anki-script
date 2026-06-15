@@ -22,7 +22,7 @@ client = OpenAI(
 
 
 # ========== 1. 内置语音 - 非流式调用 ==========
-def tts_builtin_non_stream(text, save_path, voice="茉莉", format="wav"):
+def tts_builtin_non_stream(text, save_path, voice="Mia", format="wav"):
     """使用内置音色进行语音合成（非流式）
 
     Args:
@@ -332,4 +332,4 @@ if __name__ == "__main__":
         exit(1)
 
     # 测试 TTS
-    tts_builtin_non_stream("Hello, how are you?", "test_output.wav")
+    tts_builtin_non_stream("Hello, how are you?", "./test_output.wav")

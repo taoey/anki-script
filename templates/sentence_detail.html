@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="title">句子详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .content {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .sentence-header {
+            text-align: center;
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .sentence-label {
+            font-size: 1rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .sentence-original {
+            font-size: 1.5rem;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-btn.playing {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(102, 126, 234, 0); }
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 5px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+        }
+
+        .translation {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .key-word-item {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .key-word-item:last-child {
+            border-bottom: none;
+        }
+
+        .key-word {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 150px;
+            font-size: 1.1rem;
+        }
+
+        .key-word-meaning {
+            color: #666;
+            font-size: 1.05rem;
+        }
+
+        .created-time {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #999;
+            text-align: right;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 80px;
+            color: white;
+            font-size: 1.3rem;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        /* 左右切换箭头 */
+        .arrow-nav {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+        }
+
+        .arrow-left {
+            left: 20px;
+        }
+
+        .arrow-right {
+            right: 20px;
+        }
+
+        .arrow-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+
+        .arrow-btn:hover {
+            background: white;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .arrow-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .arrow-label {
+            position: absolute;
+            bottom: -25px;
+            white-space: nowrap;
+            font-size: 0.75rem;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 900px) {
+            .arrow-nav {
+                position: fixed;
+                bottom: 30px;
+                top: auto;
+                transform: none;
+                z-index: 100;
+            }
+            .arrow-left {
+                left: 30px;
+            }
+            .arrow-right {
+                right: 30px;
+            }
+            .arrow-label {
+                display: none;
+            }
+            body {
+                padding-bottom: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 左右切换箭头 -->
+    <div class="arrow-nav arrow-left" id="arrowLeft">
+        <a href="#" class="arrow-btn disabled" id="prevBtn">←</a>
+        <span class="arrow-label" id="prevLabel"></span>
+    </div>
+    <div class="arrow-nav arrow-right" id="arrowRight">
+        <a href="#" class="arrow-btn disabled" id="nextBtn">→</a>
+        <span class="arrow-label" id="nextLabel"></span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1 id="pageTitle">📝 句子详情</h1>
+            <div class="nav-btns">
+                <a href="/sentences" class="nav-btn">← 句子列表</a>
+                <a href="/" class="nav-btn">查询</a>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">加载中</div>
+
+        <div id="content" class="content" style="display:none;"></div>
+
+        <div id="error" class="error" style="display:none;"></div>
+    </div>
+
+    <script>
+        const dirName = "{{ dir_name }}";
+        let sentencesList = [];
+        let currentIndex = -1;
+
+        document.getElementById('title').textContent = `句子详情`;
+
+        // 加载句子列表并初始化导航
+        async function initNavigation() {
+            try {
+                const response = await fetch('/api/sentences');
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    sentencesList = data.data;
+                    currentIndex = sentencesList.findIndex(s => s.dir_name === dirName);
+                    updateArrowButtons();
+                }
+            } catch (err) {
+                console.error('加载句子列表失败:', err);
+            }
+        }
+
+        // 更新箭头按钮状态
+        function updateArrowButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const prevLabel = document.getElementById('prevLabel');
+            const nextLabel = document.getElementById('nextLabel');
+
+            if (currentIndex > 0) {
+                prevBtn.classList.remove('disabled');
+                prevBtn.href = `/sentence/${sentencesList[currentIndex - 1].dir_name}`;
+                prevLabel.textContent = sentencesList[currentIndex - 1].original.substring(0, 30) + '...';
+            } else {
+                prevBtn.classList.add('disabled');
+                prevLabel.textContent = '';
+            }
+
+            if (currentIndex < sentencesList.length - 1) {
+                nextBtn.classList.remove('disabled');
+                nextBtn.href = `/sentence/${sentencesList[currentIndex + 1].dir_name}`;
+                nextLabel.textContent = sentencesList[currentIndex + 1].original.substring(0, 30) + '...';
+            } else {
+                nextBtn.classList.add('disabled');
+                nextLabel.textContent = '';
+            }
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                window.location.href = `/sentence/${sentencesList[currentIndex - 1].dir_name}`;
+            } else if (e.key === 'ArrowRight' && currentIndex < sentencesList.length - 1) {
+                window.location.href = `/sentence/${sentencesList[currentIndex + 1].dir_name}`;
+            }
+        });
+
+        async function loadSentence() {
+            try {
+                const response = await fetch(`/api/sentence/${encodeURIComponent(dirName)}`);
+                const data = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.status === 'ok') {
+                    renderSentence(data.data);
+                } else {
+                    showError(data.message || '查询失败');
+                }
+            } catch (err) {
+                document.getElementById('loading').style.display = 'none';
+                showError('网络错误，请重试');
+            }
+        }
+
+        function renderSentence(data) {
+            const audioKey = encodeURIComponent(dirName);
+
+            let html = `
+                <div class="sentence-header">
+                    <div class="sentence-label">📝 句子</div>
+                    <div class="sentence-original">${data.original}</div>
+                    <button class="play-btn" onclick="playAudio('${audioKey}', this)" title="播放发音">▶</button>
+                </div>
+            `;
+
+            // 翻译
+            if (data.translation) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">翻译</div>
+                        <div class="translation">${data.translation}</div>
+                    </div>
+                `;
+            }
+
+            // 重点单词
+            if (data.key_words && data.key_words.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">重点单词</div>
+                        ${data.key_words.map(kw => `
+                            <div class="key-word-item">
+                                <span class="key-word">${kw.word}</span>
+                                <span class="key-word-meaning">${kw.meaning}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            // 添加时间
+            if (data.created_at_str) {
+                html += `
+                    <div class="created-time">📅 添加于 ${data.created_at_str}</div>
+                `;
+            }
+
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('content').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // 播放音频
+        let currentAudio = null;
+        function playAudio(dirName, btn) {
+            if (currentAudio) {
+                currentAudio.pause();
+                document.querySelectorAll('.play-btn.playing').forEach(b => b.classList.remove('playing'));
+            }
+
+            const audio = new Audio(`/api/audio/sentence/${dirName}`);
+            currentAudio = audio;
+            btn.classList.add('playing');
+
+            audio.play().catch(err => {
+                console.error('播放失败:', err);
+                btn.classList.remove('playing');
+            });
+
+            audio.addEventListener('ended', () => {
+                btn.classList.remove('playing');
+            });
+        }
+
+        // 初始化
+        loadSentence();
+        initNavigation();
+    </script>
+</body>
+</html>

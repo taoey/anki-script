@@ -549,6 +549,7 @@
 <body>
     <div class="top-bar">
         <a href="/words" class="nav-link">📖 单词列表</a>
+        <a href="/sentences" class="nav-link">📝 句子列表</a>
         <button class="settings-btn" onclick="openSettings()">配置</button>
     </div>
 
@@ -637,7 +638,7 @@
         function renderResult(data, source) {
             const isSentence = data.type === 'sentence';
             const displayName = data.word || data.original || '';
-            const audioKey = encodeURIComponent(displayName);
+            const audioKey = isSentence ? encodeURIComponent(data.dir_name || '') : encodeURIComponent(displayName);
 
             let html = `
                 <div class="word-header">

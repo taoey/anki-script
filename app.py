@@ -92,6 +92,9 @@ def get_word(word):
                     data['created_at'] = meta.get('created_at', 0)
                     data['created_at_str'] = meta.get('created_at_str', '')
                     data['type'] = meta.get('type', input_type)
+            # 返回目录名（用于句子音频播放）
+            if input_type == "sentence":
+                data['dir_name'] = dir_name
             # 确保音频也已缓存
             if input_type == "sentence":
                 audio_path = os.path.join(word_dir, "sentence-audit.wav")
@@ -141,6 +144,8 @@ def get_word(word):
         result['created_at'] = created_at
         result['created_at_str'] = created_at_str
         result['type'] = input_type
+        if input_type == "sentence":
+            result['dir_name'] = dir_name
     except Exception as e:
         print(f"保存缓存失败: {e}")
 
@@ -297,6 +302,112 @@ def get_words_list():
         return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({"status": "ok", "data": words})
+
+
+@app.route("/sentences", methods=["GET"])
+@require_auth
+def sentences_page():
+    """句子列表页面"""
+    return render_template("sentences.html")
+
+
+@app.route("/sentence/<dir_name>", methods=["GET"])
+@require_auth
+def sentence_detail_page(dir_name):
+    """句子详情页面"""
+    return render_template("sentence_detail.html", dir_name=dir_name)
+
+
+@app.route("/api/sentences", methods=["GET"])
+@require_auth
+def get_sentences_list():
+    """获取所有已查询的句子列表"""
+    sentences = []
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+
+    if not os.path.exists(sentences_dir):
+        return jsonify({"status": "ok", "data": sentences})
+
+    try:
+        for dir_name in os.listdir(sentences_dir):
+            sentence_path = os.path.join(sentences_dir, dir_name)
+            json_path = os.path.join(sentence_path, "sentence.json")
+            meta_path = os.path.join(sentence_path, "meta.json")
+
+            if not os.path.isdir(sentence_path) or not os.path.exists(json_path):
+                continue
+
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 读取 meta.json 获取时间戳
+            created_at = 0
+            text = ""
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    meta = json.load(f)
+                    created_at = meta.get("created_at", 0)
+                    text = meta.get("text", "")
+            else:
+                created_at = os.path.getmtime(json_path)
+                try:
+                    meta_data = {
+                        "text": data.get("original", ""),
+                        "type": "sentence",
+                        "created_at": created_at,
+                        "created_at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at))
+                    }
+                    with open(meta_path, 'w', encoding='utf-8') as f:
+                        json.dump(meta_data, f, ensure_ascii=False, indent=2)
+                    text = meta_data["text"]
+                except Exception:
+                    pass
+
+            sentences.append({
+                "original": data.get("original", ""),
+                "translation": data.get("translation", ""),
+                "dir_name": dir_name,
+                "text": text,
+                "key_word_count": len(data.get("key_words", [])),
+                "created_at": created_at
+            })
+
+        # 按时间戳倒序排序
+        sentences.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({"status": "ok", "data": sentences})
+
+
+@app.route("/api/sentence/<dir_name>", methods=["GET"])
+@require_auth
+def get_sentence_detail(dir_name):
+    """获取句子详情"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_path = os.path.join(sentences_dir, dir_name)
+    json_path = os.path.join(sentence_path, "sentence.json")
+    meta_path = os.path.join(sentence_path, "meta.json")
+
+    if not os.path.exists(json_path):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # 读取 meta.json
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+                data['created_at'] = meta.get('created_at', 0)
+                data['created_at_str'] = meta.get('created_at_str', '')
+                data['type'] = 'sentence'
+
+        return jsonify({"status": "ok", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/config", methods=["GET"])
