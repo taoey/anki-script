@@ -27,6 +27,16 @@ PORT = int(os.getenv("PORT", 8076))
 AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "anki2024")
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), 'data'))
 
+# 缓存相关
+words_cache = {
+    "data": None,
+    "updated_at": 0
+}
+existing_words_cache = {
+    "data": None,
+    "updated_at": 0
+}
+
 
 def check_auth(password):
     """检查密码是否正确"""
@@ -46,6 +56,14 @@ def require_auth(f):
             )
         return f(*args, **kwargs)
     return decorated
+
+
+def invalidate_words_cache():
+    """使单词缓存失效"""
+    words_cache["data"] = None
+    words_cache["updated_at"] = 0
+    existing_words_cache["data"] = None
+    existing_words_cache["updated_at"] = 0
 
 
 @app.route("/ping", methods=["GET"])
@@ -146,6 +164,8 @@ def get_word(word):
         result['type'] = input_type
         if input_type == "sentence":
             result['dir_name'] = dir_name
+        # 新增内容，清除缓存
+        invalidate_words_cache()
     except Exception as e:
         print(f"保存缓存失败: {e}")
 
@@ -228,6 +248,10 @@ def word_detail_page(word):
 @require_auth
 def get_words_list():
     """获取所有已查询的单词列表"""
+    # 检查缓存
+    if words_cache["data"] is not None:
+        return jsonify({"status": "ok", "data": words_cache["data"]})
+
     words = []
     words_dir = os.path.join(DATA_DIR, "words")
 
@@ -300,6 +324,10 @@ def get_words_list():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+    # 更新缓存
+    words_cache["data"] = words
+    words_cache["updated_at"] = time.time()
 
     return jsonify({"status": "ok", "data": words})
 
@@ -385,6 +413,10 @@ def get_sentences_list():
 @require_auth
 def get_existing_words():
     """获取所有已存在的单词列表（用于前端高亮）"""
+    # 检查缓存
+    if existing_words_cache["data"] is not None:
+        return jsonify({"status": "ok", "data": existing_words_cache["data"]})
+
     words = []
     words_dir = os.path.join(DATA_DIR, "words")
 
@@ -396,6 +428,10 @@ def get_existing_words():
                     words.append(word_dir)
         except Exception:
             pass
+
+    # 更新缓存
+    existing_words_cache["data"] = words
+    existing_words_cache["updated_at"] = time.time()
 
     return jsonify({"status": "ok", "data": words})
 
