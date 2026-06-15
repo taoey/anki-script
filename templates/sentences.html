@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/icon.png" type="image/png">
     <title>句子列表</title>
     <style>
         * {
@@ -158,6 +159,18 @@
             margin-left: 15px;
         }
 
+        .word-link {
+            color: #e67e22;
+            border-bottom: 1px dashed #e67e22;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .word-link:hover {
+            color: #d35400;
+            border-bottom-color: #d35400;
+        }
+
         .loading {
             text-align: center;
             padding: 60px;
@@ -197,6 +210,31 @@
     </div>
 
     <script>
+        // 单词高亮相关
+        let existingWords = new Set();
+        async function loadExistingWords() {
+            try {
+                const res = await fetch('/api/words/exists');
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    existingWords = new Set(data.data);
+                }
+            } catch (err) {
+                console.error('加载单词列表失败:', err);
+            }
+        }
+        loadExistingWords();
+
+        function highlightWords(text) {
+            if (!existingWords.size) return text;
+            return text.replace(/\b([a-zA-Z]+)\b/g, (match, word) => {
+                if (existingWords.has(word.toLowerCase())) {
+                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${word.toLowerCase()}'">${match}</span>`;
+                }
+                return match;
+            });
+        }
+
         async function loadSentences() {
             try {
                 const response = await fetch('/api/sentences');
@@ -225,7 +263,7 @@
             listDiv.innerHTML = sentences.map(s => `
                 <a href="/sentence/${s.dir_name}" class="sentence-item">
                     <div class="sentence-main">
-                        <div class="sentence-original">${s.original}</div>
+                        <div class="sentence-original">${highlightWords(s.original)}</div>
                         <div class="sentence-translation">${s.translation || ''}</div>
                     </div>
                     <div class="sentence-stats">

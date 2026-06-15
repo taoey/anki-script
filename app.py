@@ -381,6 +381,25 @@ def get_sentences_list():
     return jsonify({"status": "ok", "data": sentences})
 
 
+@app.route("/api/words/exists", methods=["GET"])
+@require_auth
+def get_existing_words():
+    """获取所有已存在的单词列表（用于前端高亮）"""
+    words = []
+    words_dir = os.path.join(DATA_DIR, "words")
+
+    if os.path.exists(words_dir):
+        try:
+            for word_dir in os.listdir(words_dir):
+                word_path = os.path.join(words_dir, word_dir)
+                if os.path.isdir(word_path) and os.path.exists(os.path.join(word_path, "word.json")):
+                    words.append(word_dir)
+        except Exception:
+            pass
+
+    return jsonify({"status": "ok", "data": words})
+
+
 @app.route("/api/sentence/<dir_name>", methods=["GET"])
 @require_auth
 def get_sentence_detail(dir_name):

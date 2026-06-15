@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/icon.png" type="image/png">
     <title>英语小助手</title>
     <style>
         * {
@@ -494,6 +495,18 @@
             line-height: 1.6;
         }
 
+        .word-link {
+            color: #e67e22;
+            border-bottom: 1px dashed #e67e22;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .word-link:hover {
+            color: #d35400;
+            border-bottom-color: #d35400;
+        }
+
         .key-word-item {
             display: flex;
             padding: 10px 0;
@@ -592,6 +605,31 @@
         const errorDiv = document.getElementById('error');
         const contentDiv = document.getElementById('content');
 
+        // 单词高亮相关
+        let existingWords = new Set();
+        async function loadExistingWords() {
+            try {
+                const res = await fetch('/api/words/exists');
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    existingWords = new Set(data.data);
+                }
+            } catch (err) {
+                console.error('加载单词列表失败:', err);
+            }
+        }
+        loadExistingWords();
+
+        function highlightWords(text) {
+            if (!existingWords.size) return text;
+            return text.replace(/\b([a-zA-Z]+)\b/g, (match, word) => {
+                if (existingWords.has(word.toLowerCase())) {
+                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${word.toLowerCase()}'">${match}</span>`;
+                }
+                return match;
+            });
+        }
+
         // 回车搜索（Shift+Enter 换行，Enter 提交）
         wordInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -654,7 +692,7 @@
                 html += `
                     <div class="section">
                         <div class="section-title">原文</div>
-                        <div class="sentence-original">${data.original}</div>
+                        <div class="sentence-original">${highlightWords(data.original)}</div>
                     </div>
                     <div class="section">
                         <div class="section-title">翻译</div>
@@ -714,7 +752,7 @@
                             ${data.examples.map((e, i) => `
                                 <div class="example">
                                     <div class="example-header">
-                                        <div class="example-sentence">${e.sentence}</div>
+                                        <div class="example-sentence">${highlightWords(e.sentence)}</div>
                                         <button class="sentence-play-btn" onclick="playSentenceAudio('${audioKey}', ${i + 1}, this)" title="播放例句">▶</button>
                                     </div>
                                     <div class="example-source">🎬 ${e.source || ''}</div>
