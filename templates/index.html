@@ -643,7 +643,7 @@
                 <div class="word-header">
                     <div class="word">${isSentence ? '📝 句子' : displayName}</div>
                     ${!isSentence && data.phonetic ? `<div class="phonetic">${data.phonetic}</div>` : ''}
-                    <button class="play-btn" onclick="playAudio('${audioKey}', this)" title="播放发音">▶</button>
+                    <button class="play-btn" onclick="playAudio('${audioKey}', this, '${data.type}')" title="播放发音">▶</button>
                     <span class="source-badge">${source === 'cache' ? '📦 本地缓存' : '🌐 API 查询'}</span>
                 </div>
             `;
@@ -733,15 +733,18 @@
             errorDiv.style.display = 'block';
         }
 
-        // 播放单词音频
+        // 播放单词/句子音频
         let currentAudio = null;
-        function playAudio(word, btn) {
+        function playAudio(word, btn, type = 'word') {
             if (currentAudio) {
                 currentAudio.pause();
                 document.querySelectorAll('.play-btn.playing, .sentence-play-btn.playing').forEach(b => b.classList.remove('playing'));
             }
 
-            const audio = new Audio(`/api/audio/${encodeURIComponent(word)}`);
+            const audioUrl = type === 'sentence' ?
+                `/api/audio/sentence/${word}` :
+                `/api/audio/${word}`;
+            const audio = new Audio(audioUrl);
             currentAudio = audio;
             btn.classList.add('playing');
 

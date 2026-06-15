@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import time
+import hashlib
 from functools import wraps
 from flask import Flask, jsonify, request, Response, render_template
 from dotenv import load_dotenv
@@ -67,15 +68,15 @@ def get_word(word):
     word = word.strip()
     input_type = classify_input(word)
 
-    # 对于句子，使用原始文本作为目录名（替换特殊字符）
+    # 对于句子，使用 MD5 作为目录名
     if input_type == "sentence":
-        import re
-        dir_name = re.sub(r'[^\w\s-]', '', word.lower())[:50].strip()
-        dir_name = re.sub(r'\s+', '_', dir_name)
+        dir_name = hashlib.md5(word.encode('utf-8')).hexdigest()
+        parent_dir = os.path.join(DATA_DIR, "sentences")
     else:
         dir_name = word.lower()
+        parent_dir = os.path.join(DATA_DIR, "words")
 
-    word_dir = os.path.join(DATA_DIR, dir_name)
+    word_dir = os.path.join(parent_dir, dir_name)
     json_path = os.path.join(word_dir, "sentence.json" if input_type == "sentence" else "word.json")
 
     # 检查本地是否已有缓存
@@ -92,12 +93,20 @@ def get_word(word):
                     data['created_at_str'] = meta.get('created_at_str', '')
                     data['type'] = meta.get('type', input_type)
             # 确保音频也已缓存
-            get_audio(dir_name, DATA_DIR)
+            if input_type == "sentence":
+                audio_path = os.path.join(word_dir, "sentence-audit.wav")
+                if not os.path.exists(audio_path):
+                    from util.mimo import tts_builtin_non_stream
+                    tts_builtin_non_stream(data.get("original", word), audio_path)
+            else:
+                words_dir = os.path.join(DATA_DIR, "words")
+                get_audio(dir_name, words_dir)
             # 确保例句音频已生成（仅单词）
             if input_type == "word":
                 examples = data.get("examples", [])
                 if examples:
-                    generate_sentence_audio(dir_name, DATA_DIR, examples)
+                    words_dir = os.path.join(DATA_DIR, "words")
+                    generate_sentence_audio(dir_name, words_dir, examples)
             return jsonify({"status": "ok", "data": data, "source": "cache"})
         except Exception as e:
             return jsonify({"status": "error", "message": f"读取缓存失败: {str(e)}"}), 500
@@ -136,18 +145,17 @@ def get_word(word):
         print(f"保存缓存失败: {e}")
 
     # 下载并缓存发音音频
-    get_audio(dir_name, DATA_DIR)
-
-    # 生成例句音频（仅单词）
-    if input_type == "word":
+    if input_type == "sentence":
+        from util.mimo import tts_builtin_non_stream
+        audio_path = os.path.join(word_dir, "sentence-audit.wav")
+        tts_builtin_non_stream(word, audio_path)
+    else:
+        words_dir = os.path.join(DATA_DIR, "words")
+        get_audio(dir_name, words_dir)
+        # 生成例句音频（仅单词）
         examples = result.get("examples", [])
         if examples:
-            generate_sentence_audio(dir_name, DATA_DIR, examples)
-
-    # 生成例句音频
-    examples = result.get("examples", [])
-    if examples:
-        generate_sentence_audio(word, DATA_DIR, examples)
+            generate_sentence_audio(dir_name, words_dir, examples)
 
     return jsonify({"status": "ok", "data": result, "source": "api"})
 
@@ -157,7 +165,8 @@ def get_word(word):
 def get_word_audio(word):
     """获取单词发音音频"""
     word = word.lower().strip()
-    data = get_audio(word, DATA_DIR)
+    words_dir = os.path.join(DATA_DIR, "words")
+    data = get_audio(word, words_dir)
 
     if not data:
         return jsonify({"status": "error", "message": "音频获取失败"}), 500
@@ -170,7 +179,22 @@ def get_word_audio(word):
 def get_sentence_audio(word, index):
     """获取例句音频"""
     word = word.lower().strip()
-    audio_path = os.path.join(DATA_DIR, word, f"sentence-audit-{index}.wav")
+    audio_path = os.path.join(DATA_DIR, "words", word, f"sentence-audit-{index}.wav")
+
+    if not os.path.exists(audio_path):
+        return jsonify({"status": "error", "message": "音频不存在"}), 404
+
+    with open(audio_path, "rb") as f:
+        data = f.read()
+
+    return Response(data, mimetype="audio/wav")
+
+
+@app.route("/api/audio/sentence/<dir_name>", methods=["GET"])
+@require_auth
+def get_sentence_audio_file(dir_name):
+    """获取句子发音音频"""
+    audio_path = os.path.join(DATA_DIR, "sentences", dir_name, "sentence-audit.wav")
 
     if not os.path.exists(audio_path):
         return jsonify({"status": "error", "message": "音频不存在"}), 404
@@ -198,17 +222,17 @@ def word_detail_page(word):
 @app.route("/api/words", methods=["GET"])
 @require_auth
 def get_words_list():
-    """获取所有已查询的单词/句子列表"""
+    """获取所有已查询的单词列表"""
     words = []
+    words_dir = os.path.join(DATA_DIR, "words")
 
-    if not os.path.exists(DATA_DIR):
+    if not os.path.exists(words_dir):
         return jsonify({"status": "ok", "data": words})
 
     try:
-        for word_dir in os.listdir(DATA_DIR):
-            word_path = os.path.join(DATA_DIR, word_dir)
+        for word_dir in os.listdir(words_dir):
+            word_path = os.path.join(words_dir, word_dir)
             word_json_path = os.path.join(word_path, "word.json")
-            sentence_json_path = os.path.join(word_path, "sentence.json")
             meta_path = os.path.join(word_path, "meta.json")
 
             # 确定使用哪个 JSON 文件
@@ -217,9 +241,6 @@ def get_words_list():
             if os.path.exists(word_json_path):
                 json_path = word_json_path
                 input_type = "word"
-            elif os.path.exists(sentence_json_path):
-                json_path = sentence_json_path
-                input_type = "sentence"
 
             # 检查是否是目录且包含 JSON 文件
             if os.path.isdir(word_path) and json_path and os.path.exists(json_path):
