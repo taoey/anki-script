@@ -75,5 +75,60 @@ def get_word(word):
     return jsonify({"status": "ok", "data": result, "source": "api"})
 
 
+@app.route("/words", methods=["GET"])
+def words_page():
+    """单词列表页面"""
+    return render_template("words.html")
+
+
+@app.route("/word/<word>", methods=["GET"])
+def word_detail_page(word):
+    """单词详情页面"""
+    return render_template("word_detail.html", word=word)
+
+
+@app.route("/api/words", methods=["GET"])
+def get_words_list():
+    """获取所有已查询的单词列表
+
+    Returns:
+        JSON: 单词列表
+    """
+    words = []
+
+    if not os.path.exists(DATA_DIR):
+        return jsonify({"status": "ok", "data": words})
+
+    try:
+        for word_dir in os.listdir(DATA_DIR):
+            word_path = os.path.join(DATA_DIR, word_dir)
+            json_path = os.path.join(word_path, f"{word_dir}.json")
+
+            # 检查是否是目录且包含 JSON 文件
+            if os.path.isdir(word_path) and os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # 提取摘要信息
+                definitions = data.get("definitions", [])
+                first_meaning = definitions[0].get("meaning", "") if definitions else ""
+
+                words.append({
+                    "word": word_dir,
+                    "phonetic": data.get("phonetic", ""),
+                    "meaning": first_meaning,
+                    "definition_count": len(definitions),
+                    "phrase_count": len(data.get("phrases", []))
+                })
+
+        # 按字母排序
+        words.sort(key=lambda x: x["word"])
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({"status": "ok", "data": words})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)

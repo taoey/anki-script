@@ -31,6 +31,29 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
+        .nav-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .nav-link:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        body {
+            position: relative;
+        }
+
         .search-box {
             background: white;
             border-radius: 12px;
@@ -256,6 +279,7 @@
     </style>
 </head>
 <body>
+    <a href="/words" class="nav-link">📖 单词列表</a>
     <div class="container">
         <h1>📚 英语单词查询</h1>
 

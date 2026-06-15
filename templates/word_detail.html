@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="title">单词详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .content {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .word-header {
+            text-align: center;
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .word {
+            font-size: 3rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .phonetic {
+            font-size: 1.3rem;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 5px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+        }
+
+        .definition {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .pos {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-right: 12px;
+        }
+
+        .meaning {
+            color: #333;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .english-meaning {
+            color: #666;
+            font-size: 1rem;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .phrase-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .phrase-table tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .phrase-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .phrase-table td {
+            padding: 15px 0;
+        }
+
+        .phrase-table .phrase {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 200px;
+        }
+
+        .phrase-table .phrase-meaning {
+            color: #666;
+        }
+
+        .example {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .example-sentence {
+            font-size: 1.15rem;
+            color: #333;
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .example-source {
+            color: #667eea;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .example-translation {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 80px;
+            color: white;
+            font-size: 1.3rem;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid white;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 12px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="pageTitle">📖 单词详情</h1>
+            <div class="nav-btns">
+                <a href="/words" class="nav-btn">← 单词列表</a>
+                <a href="/" class="nav-btn">查询</a>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">加载中</div>
+
+        <div id="content" class="content" style="display:none;"></div>
+
+        <div id="error" class="error" style="display:none;"></div>
+    </div>
+
+    <script>
+        const word = "{{ word }}";
+        document.getElementById('title').textContent = `${word} - 单词详情`;
+        document.getElementById('pageTitle').textContent = `📖 ${word}`;
+
+        async function loadWord() {
+            try {
+                const response = await fetch(`/api/word/${encodeURIComponent(word)}`);
+                const data = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.status === 'ok') {
+                    renderWord(data.data);
+                } else {
+                    showError(data.message || '查询失败');
+                }
+            } catch (err) {
+                document.getElementById('loading').style.display = 'none';
+                showError('网络错误，请重试');
+            }
+        }
+
+        function renderWord(data) {
+            let html = `
+                <div class="word-header">
+                    <div class="word">${data.word}</div>
+                    <div class="phonetic">${data.phonetic || ''}</div>
+                </div>
+            `;
+
+            // 释义
+            if (data.definitions && data.definitions.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">释义</div>
+                        ${data.definitions.map(d => `
+                            <div class="definition">
+                                <span class="pos">${d.pos}</span>
+                                <span class="meaning">${d.meaning}</span>
+                                ${d.english ? `<div class="english-meaning">${d.english}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            // 常用词组
+            if (data.phrases && data.phrases.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">常用词组</div>
+                        <table class="phrase-table">
+                            ${data.phrases.map(p => `
+                                <tr>
+                                    <td class="phrase">${p.phrase}</td>
+                                    <td class="phrase-meaning">${p.meaning}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            }
+
+            // 例句
+            if (data.examples && data.examples.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">例句</div>
+                        ${data.examples.map(e => `
+                            <div class="example">
+                                <div class="example-sentence">"${e.sentence}"</div>
+                                ${e.source ? `<div class="example-source">🎬 ${e.source}</div>` : ''}
+                                <div class="example-translation">${e.translation}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('content').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        loadWord();
+    </script>
+</body>
+</html>
