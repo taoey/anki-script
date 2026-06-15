@@ -141,6 +141,22 @@ def get_word(word):
     if not result:
         return jsonify({"status": "error", "message": "查询失败，请检查网络或 API Key"}), 500
 
+    # 对于单词，检查 MIMO 返回的 word 是否与用户输入一致
+    if input_type == "word" and "word" in result:
+        mimo_word = result["word"].lower().strip()
+        if mimo_word != dir_name:
+            # 使用 MIMO 返回的正确单词作为目录名
+            correct_dir = os.path.join(parent_dir, mimo_word)
+            # 如果旧目录已存在，移动到新目录
+            if os.path.exists(word_dir) and word_dir != correct_dir:
+                import shutil
+                if os.path.exists(correct_dir):
+                    shutil.rmtree(correct_dir)
+                os.rename(word_dir, correct_dir)
+            word_dir = correct_dir
+            dir_name = mimo_word
+            json_path = os.path.join(word_dir, "word.json")
+
     # 保存到本地
     try:
         os.makedirs(word_dir, exist_ok=True)
@@ -157,6 +173,8 @@ def get_word(word):
             "created_at": created_at,
             "created_at_str": created_at_str
         }
+        if input_type == "word":
+            meta_data["word"] = dir_name
         with open(meta_path, 'w', encoding='utf-8') as f:
             json.dump(meta_data, f, ensure_ascii=False, indent=2)
         result['created_at'] = created_at
@@ -302,8 +320,8 @@ def get_words_list():
                 if input_type != "word":
                     continue
 
-                # 提取摘要信息
-                display_text = word_dir
+                # 提取摘要信息（优先使用 word.json 中的 word）
+                display_text = data.get("word", word_dir)
                 definitions = data.get("definitions", [])
                 first_meaning = definitions[0].get("meaning", "") if definitions else ""
                 phonetic = data.get("phonetic", "")

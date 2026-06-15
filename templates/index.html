@@ -630,14 +630,6 @@
             });
         }
 
-        // 回车搜索（Shift+Enter 换行，Enter 提交）
-        wordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                searchWord();
-            }
-        });
-
         // 自动调整高度
         wordInput.addEventListener('input', autoResize);
         function autoResize() {
