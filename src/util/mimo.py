@@ -98,6 +98,88 @@ def generate_sentence_audio(word, data_dir, examples):
     return generated
 
 
+def classify_input(text):
+    """判断用户输入是单词还是句子
+
+    Args:
+        text (str): 用户输入
+
+    Returns:
+        str: "word" 或 "sentence"
+    """
+    # 简单判断：包含空格或长度超过一定值认为是句子
+    text = text.strip()
+    if len(text.split()) > 1 or len(text) > 20:
+        return "sentence"
+    return "word"
+
+
+SENTENCE_PROMPT = """You are an English translation expert. For the given English sentence, you MUST respond with ONLY a valid JSON object.
+
+EXAMPLE:
+{
+  "original": "Life is like a box of chocolates, you never know what you're gonna get.",
+  "translation": "人生就像一盒巧克力，你永远不知道下一颗是什么味道。",
+  "key_words": [
+    {"word": "chocolates", "meaning": "巧克力"},
+    {"word": "never", "meaning": "从不"}
+  ]
+}
+
+RULES:
+1. Response MUST be valid JSON only - no markdown, no explanation
+2. Provide accurate Chinese translation
+3. Extract 3-5 key vocabulary words from the sentence
+4. Include Chinese meaning for each key word"""
+
+
+def translate_sentence(sentence, max_retries=3):
+    """翻译英文句子并提取重点单词
+
+    Args:
+        sentence (str): 英文句子
+        max_retries (int): 最大重试次数
+
+    Returns:
+        dict: 包含翻译和重点单词的字典，失败返回 None
+    """
+    import json
+    import re
+
+    for attempt in range(max_retries):
+        response = chat(
+            system_message=SENTENCE_PROMPT,
+            user_message=f"Translate this sentence: {sentence}",
+            temperature=0.1 + attempt * 0.1,
+            response_format={"type": "json_object"}
+        )
+
+        if not response:
+            continue
+
+        json_str = response.strip()
+
+        if json_str.startswith("```"):
+            json_str = json_str.split("\n", 1)[1] if "\n" in json_str else json_str[3:]
+            json_str = json_str.rsplit("```", 1)[0]
+
+        match = re.search(r'\{[\s\S]*\}', json_str)
+        if match:
+            json_str = match.group()
+
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*]', ']', json_str)
+
+        try:
+            result = json.loads(json_str)
+            if "original" in result and "translation" in result:
+                return result
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON 解析失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+
+    return None
+
+
 # chat 基础函数
 def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_tokens=2048, response_format=None):
     """与 MiMo 进行对话

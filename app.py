@@ -17,7 +17,7 @@ load_dotenv()
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from util.mimo import explain_word, generate_sentence_audio
+from util.mimo import explain_word, generate_sentence_audio, classify_input, translate_sentence
 from util.audio import get_audio
 
 app = Flask(__name__)
@@ -63,35 +63,50 @@ def index():
 @app.route("/api/word/<word>", methods=["GET"])
 @require_auth
 def get_word(word):
-    """查询单词解释"""
-    word = word.lower().strip()
-    word_dir = os.path.join(DATA_DIR, word)
-    json_path = os.path.join(word_dir, "word.json")
+    """查询单词或句子"""
+    word = word.strip()
+    input_type = classify_input(word)
+
+    # 对于句子，使用原始文本作为目录名（替换特殊字符）
+    if input_type == "sentence":
+        import re
+        dir_name = re.sub(r'[^\w\s-]', '', word.lower())[:50].strip()
+        dir_name = re.sub(r'\s+', '_', dir_name)
+    else:
+        dir_name = word.lower()
+
+    word_dir = os.path.join(DATA_DIR, dir_name)
+    json_path = os.path.join(word_dir, "sentence.json" if input_type == "sentence" else "word.json")
 
     # 检查本地是否已有缓存
     if os.path.exists(json_path):
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            # 读取 meta.json 获取时间戳
+            # 读取 meta.json 获取时间戳和类型
             meta_path = os.path.join(word_dir, "meta.json")
             if os.path.exists(meta_path):
                 with open(meta_path, 'r', encoding='utf-8') as f:
                     meta = json.load(f)
                     data['created_at'] = meta.get('created_at', 0)
                     data['created_at_str'] = meta.get('created_at_str', '')
+                    data['type'] = meta.get('type', input_type)
             # 确保音频也已缓存
-            get_audio(word, DATA_DIR)
-            # 确保例句音频已生成
-            examples = data.get("examples", [])
-            if examples:
-                generate_sentence_audio(word, DATA_DIR, examples)
+            get_audio(dir_name, DATA_DIR)
+            # 确保例句音频已生成（仅单词）
+            if input_type == "word":
+                examples = data.get("examples", [])
+                if examples:
+                    generate_sentence_audio(dir_name, DATA_DIR, examples)
             return jsonify({"status": "ok", "data": data, "source": "cache"})
         except Exception as e:
             return jsonify({"status": "error", "message": f"读取缓存失败: {str(e)}"}), 500
 
-    # 调用 API 获取单词解释
-    result = explain_word(word)
+    # 根据类型调用不同 API
+    if input_type == "sentence":
+        result = translate_sentence(word)
+    else:
+        result = explain_word(word)
 
     if not result:
         return jsonify({"status": "error", "message": "查询失败，请检查网络或 API Key"}), 500
@@ -102,12 +117,13 @@ def get_word(word):
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
-        # 保存 meta.json（包含时间戳）
+        # 保存 meta.json（包含时间戳和类型）
         meta_path = os.path.join(word_dir, "meta.json")
         created_at = time.time()
         created_at_str = time.strftime("%Y-%m-%d %H:%M:%S")
         meta_data = {
-            "word": word,
+            "text": word,
+            "type": input_type,
             "created_at": created_at,
             "created_at_str": created_at_str
         }
@@ -115,11 +131,18 @@ def get_word(word):
             json.dump(meta_data, f, ensure_ascii=False, indent=2)
         result['created_at'] = created_at
         result['created_at_str'] = created_at_str
+        result['type'] = input_type
     except Exception as e:
         print(f"保存缓存失败: {e}")
 
     # 下载并缓存发音音频
-    get_audio(word, DATA_DIR)
+    get_audio(dir_name, DATA_DIR)
+
+    # 生成例句音频（仅单词）
+    if input_type == "word":
+        examples = result.get("examples", [])
+        if examples:
+            generate_sentence_audio(dir_name, DATA_DIR, examples)
 
     # 生成例句音频
     examples = result.get("examples", [])
@@ -175,7 +198,7 @@ def word_detail_page(word):
 @app.route("/api/words", methods=["GET"])
 @require_auth
 def get_words_list():
-    """获取所有已查询的单词列表"""
+    """获取所有已查询的单词/句子列表"""
     words = []
 
     if not os.path.exists(DATA_DIR):
@@ -184,26 +207,39 @@ def get_words_list():
     try:
         for word_dir in os.listdir(DATA_DIR):
             word_path = os.path.join(DATA_DIR, word_dir)
-            json_path = os.path.join(word_path, "word.json")
+            word_json_path = os.path.join(word_path, "word.json")
+            sentence_json_path = os.path.join(word_path, "sentence.json")
             meta_path = os.path.join(word_path, "meta.json")
 
+            # 确定使用哪个 JSON 文件
+            json_path = None
+            input_type = "word"
+            if os.path.exists(word_json_path):
+                json_path = word_json_path
+                input_type = "word"
+            elif os.path.exists(sentence_json_path):
+                json_path = sentence_json_path
+                input_type = "sentence"
+
             # 检查是否是目录且包含 JSON 文件
-            if os.path.isdir(word_path) and os.path.exists(json_path):
+            if os.path.isdir(word_path) and json_path and os.path.exists(json_path):
                 with open(json_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                # 读取 meta.json 获取时间戳
+                # 读取 meta.json 获取时间戳和类型
                 created_at = 0
                 if os.path.exists(meta_path):
                     with open(meta_path, 'r', encoding='utf-8') as f:
                         meta = json.load(f)
                         created_at = meta.get("created_at", 0)
+                        input_type = meta.get("type", input_type)
                 else:
                     # 如果没有 meta.json，使用文件修改时间并创建
                     created_at = os.path.getmtime(json_path)
                     try:
                         meta_data = {
-                            "word": word_dir,
+                            "text": word_dir,
+                            "type": input_type,
                             "created_at": created_at,
                             "created_at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at))
                         }
@@ -212,15 +248,23 @@ def get_words_list():
                     except Exception:
                         pass
 
+                # 只返回单词类型
+                if input_type != "word":
+                    continue
+
                 # 提取摘要信息
+                display_text = word_dir
                 definitions = data.get("definitions", [])
                 first_meaning = definitions[0].get("meaning", "") if definitions else ""
+                phonetic = data.get("phonetic", "")
 
                 words.append({
-                    "word": word_dir,
-                    "phonetic": data.get("phonetic", ""),
+                    "word": display_text,
+                    "dir_name": word_dir,
+                    "type": input_type,
+                    "phonetic": phonetic,
                     "meaning": first_meaning,
-                    "definition_count": len(definitions),
+                    "definition_count": len(data.get("definitions", [])),
                     "phrase_count": len(data.get("phrases", [])),
                     "created_at": created_at
                 })

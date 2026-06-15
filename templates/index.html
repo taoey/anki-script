@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英语单词查询</title>
+    <title>英语小助手</title>
     <style>
         * {
             margin: 0;
@@ -217,6 +217,26 @@
         }
 
         input[type="text"]:focus {
+            border-color: #667eea;
+        }
+
+        #wordInput {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: none;
+            min-height: 56px;
+            max-height: 200px;
+            font-family: inherit;
+            line-height: 1.4;
+            overflow-y: auto;
+        }
+
+        #wordInput:focus {
             border-color: #667eea;
         }
 
@@ -455,6 +475,45 @@
             font-size: 0.95rem;
         }
 
+        .sentence-original {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            color: #333;
+            line-height: 1.6;
+            border-left: 4px solid #667eea;
+        }
+
+        .sentence-translation {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .key-word-item {
+            display: flex;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .key-word-item:last-child {
+            border-bottom: none;
+        }
+
+        .key-word {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 150px;
+        }
+
+        .key-word-meaning {
+            color: #666;
+        }
+
         .loading {
             text-align: center;
             padding: 40px;
@@ -508,11 +567,11 @@
         </div>
     </div>
     <div class="container">
-        <h1>📚 英语单词查询</h1>
+        <h1>📚 英语小助手</h1>
 
         <div class="search-box">
             <div class="input-group">
-                <input type="text" id="wordInput" placeholder="请输入英语单词..." autofocus>
+                <textarea id="wordInput" placeholder="" rows="1" wrap="soft" autofocus></textarea>
                 <button id="searchBtn" onclick="searchWord()">查询</button>
             </div>
         </div>
@@ -532,10 +591,20 @@
         const errorDiv = document.getElementById('error');
         const contentDiv = document.getElementById('content');
 
-        // 回车搜索
-        wordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchWord();
+        // 回车搜索（Shift+Enter 换行，Enter 提交）
+        wordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                searchWord();
+            }
         });
+
+        // 自动调整高度
+        wordInput.addEventListener('input', autoResize);
+        function autoResize() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        }
 
         async function searchWord() {
             const word = wordInput.value.trim();
@@ -566,63 +635,94 @@
         }
 
         function renderResult(data, source) {
+            const isSentence = data.type === 'sentence';
+            const displayName = data.word || data.original || '';
+            const audioKey = encodeURIComponent(displayName);
+
             let html = `
                 <div class="word-header">
-                    <div class="word">${data.word}</div>
-                    <div class="phonetic">${data.phonetic || ''}</div>
-                    <button class="play-btn" onclick="playAudio('${data.word}', this)" title="播放发音">▶</button>
+                    <div class="word">${isSentence ? '📝 句子' : displayName}</div>
+                    ${!isSentence && data.phonetic ? `<div class="phonetic">${data.phonetic}</div>` : ''}
+                    <button class="play-btn" onclick="playAudio('${audioKey}', this)" title="播放发音">▶</button>
                     <span class="source-badge">${source === 'cache' ? '📦 本地缓存' : '🌐 API 查询'}</span>
                 </div>
             `;
 
-            // 释义
-            if (data.definitions && data.definitions.length > 0) {
+            if (isSentence) {
+                // 句子：显示原文和翻译
                 html += `
                     <div class="section">
-                        <div class="section-title">释义</div>
-                        ${data.definitions.map(d => `
-                            <div class="definition">
-                                <span class="pos">${d.pos}</span>
-                                <span class="meaning">${d.meaning}</span>
-                                <div class="english-meaning">${d.english || ''}</div>
-                            </div>
-                        `).join('')}
+                        <div class="section-title">原文</div>
+                        <div class="sentence-original">${data.original}</div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">翻译</div>
+                        <div class="sentence-translation">${data.translation}</div>
                     </div>
                 `;
-            }
 
-            // 常用词组
-            if (data.phrases && data.phrases.length > 0) {
-                html += `
-                    <div class="section">
-                        <div class="section-title">常用词组</div>
-                        ${data.phrases.map(p => `
-                            <div class="phrase-item">
-                                <span class="phrase">${p.phrase}</span>
-                                <span class="phrase-meaning">${p.meaning}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // 例句
-            if (data.examples && data.examples.length > 0) {
-                html += `
-                    <div class="section">
-                        <div class="section-title">例句</div>
-                        ${data.examples.map((e, i) => `
-                            <div class="example">
-                                <div class="example-header">
-                                    <div class="example-sentence">${e.sentence}</div>
-                                    <button class="sentence-play-btn" onclick="playSentenceAudio('${data.word}', ${i + 1}, this)" title="播放例句">▶</button>
+                // 重点单词
+                if (data.key_words && data.key_words.length > 0) {
+                    html += `
+                        <div class="section">
+                            <div class="section-title">重点单词</div>
+                            ${data.key_words.map(kw => `
+                                <div class="key-word-item">
+                                    <span class="key-word">${kw.word}</span>
+                                    <span class="key-word-meaning">${kw.meaning}</span>
                                 </div>
-                                <div class="example-source">🎬 ${e.source || ''}</div>
-                                <div class="example-translation">${e.translation}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } else {
+                // 单词：显示释义、词组、例句
+                if (data.definitions && data.definitions.length > 0) {
+                    html += `
+                        <div class="section">
+                            <div class="section-title">释义</div>
+                            ${data.definitions.map(d => `
+                                <div class="definition">
+                                    <span class="pos">${d.pos}</span>
+                                    <span class="meaning">${d.meaning}</span>
+                                    <div class="english-meaning">${d.english || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                if (data.phrases && data.phrases.length > 0) {
+                    html += `
+                        <div class="section">
+                            <div class="section-title">常用词组</div>
+                            ${data.phrases.map(p => `
+                                <div class="phrase-item">
+                                    <span class="phrase">${p.phrase}</span>
+                                    <span class="phrase-meaning">${p.meaning}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                if (data.examples && data.examples.length > 0) {
+                    html += `
+                        <div class="section">
+                            <div class="section-title">例句</div>
+                            ${data.examples.map((e, i) => `
+                                <div class="example">
+                                    <div class="example-header">
+                                        <div class="example-sentence">${e.sentence}</div>
+                                        <button class="sentence-play-btn" onclick="playSentenceAudio('${audioKey}', ${i + 1}, this)" title="播放例句">▶</button>
+                                    </div>
+                                    <div class="example-source">🎬 ${e.source || ''}</div>
+                                    <div class="example-translation">${e.translation}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
             }
 
             contentDiv.innerHTML = html;

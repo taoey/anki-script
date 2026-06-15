@@ -227,8 +227,11 @@
 
             // 渲染列表
             const listDiv = document.getElementById('wordList');
-            listDiv.innerHTML = words.map(w => `
-                <a href="/word/${w.word}" class="word-item">
+            listDiv.innerHTML = words.map(w => {
+                const audioKey = encodeURIComponent(w.dir_name || w.word);
+
+                return `
+                <a href="/word/${w.dir_name || w.word}" class="word-item">
                     <div class="word-main">
                         <div class="word-text">${w.word}</div>
                         <div class="word-phonetic">${w.phonetic || ''}</div>
@@ -238,10 +241,10 @@
                         <span class="stat-badge">${w.definition_count} 释义</span>
                         <span class="stat-badge">${w.phrase_count} 词组</span>
                     </div>
-                    <button class="play-btn" onclick="event.preventDefault(); event.stopPropagation(); playAudio('${w.word}', this)" title="播放发音">▶</button>
+                    <button class="play-btn" onclick="event.preventDefault(); event.stopPropagation(); playAudio('${audioKey}', this)" title="播放发音">▶</button>
                     <span class="arrow">→</span>
                 </a>
-            `).join('');
+            `}).join('');
 
             listDiv.style.display = 'block';
         }
