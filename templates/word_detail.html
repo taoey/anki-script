@@ -211,11 +211,47 @@
             border-left: 5px solid #667eea;
         }
 
+        .example-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
         .example-sentence {
             font-size: 1.15rem;
             color: #333;
             line-height: 1.7;
-            margin-bottom: 12px;
+            flex: 1;
+        }
+
+        .sentence-play-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .sentence-play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .sentence-play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sentence-play-btn.playing {
+            animation: pulse 1s infinite;
         }
 
         .example-source {
@@ -490,9 +526,12 @@
                 html += `
                     <div class="section">
                         <div class="section-title">例句</div>
-                        ${data.examples.map(e => `
+                        ${data.examples.map((e, i) => `
                             <div class="example">
-                                <div class="example-sentence">${e.sentence}</div>
+                                <div class="example-header">
+                                    <div class="example-sentence">${e.sentence}</div>
+                                    <button class="sentence-play-btn" onclick="playSentenceAudio('${data.word}', ${i + 1}, this)" title="播放例句">▶</button>
+                                </div>
                                 ${e.source ? `<div class="example-source">🎬 ${e.source}</div>` : ''}
                                 <div class="example-translation">${e.translation}</div>
                             </div>
@@ -527,6 +566,27 @@
             }
 
             const audio = new Audio(`/api/audio/${encodeURIComponent(word)}`);
+            currentAudio = audio;
+            btn.classList.add('playing');
+
+            audio.play().catch(err => {
+                console.error('播放失败:', err);
+                btn.classList.remove('playing');
+            });
+
+            audio.addEventListener('ended', () => {
+                btn.classList.remove('playing');
+            });
+        }
+
+        // 播放例句音频
+        function playSentenceAudio(word, index, btn) {
+            if (currentAudio) {
+                currentAudio.pause();
+                document.querySelectorAll('.play-btn.playing, .sentence-play-btn.playing').forEach(b => b.classList.remove('playing'));
+            }
+
+            const audio = new Audio(`/api/audio/${encodeURIComponent(word)}/sentence/${index}`);
             currentAudio = audio;
             btn.classList.add('playing');
 

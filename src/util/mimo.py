@@ -22,28 +22,81 @@ client = OpenAI(
 
 
 # ========== 1. 内置语音 - 非流式调用 ==========
-def tts_builtin_non_stream():
-    """使用内置音色进行语音合成（非流式），支持: 冰糖/茉莉/苏打/白桦/Mia/Chloe/Milo/Dean"""
-    completion = client.chat.completions.create(
-        model="mimo-v2.5-tts",
-        messages=[
-            {
-                "role": "user",
-                "content": "用标准美音发音",
-            },
-            {
-                "role": "assistant",
-                "content": "I can't believe you forgot my birthday. I reminded you three times this week. You even wrote it on your hand!",
-            },
-        ],
-        audio={"format": "wav", "voice": "茉莉"},
-    )
+def tts_builtin_non_stream(text, save_path, voice="茉莉", format="wav"):
+    """使用内置音色进行语音合成（非流式）
 
-    message = completion.choices[0].message
-    audio_bytes = base64.b64decode(message.audio.data)
-    with open("output_builtin.wav", "wb") as f:
-        f.write(audio_bytes)
-    print("内置语音（非流式）已保存到 output_builtin.wav")
+    Args:
+        text (str): 要合成的文本
+        save_path (str): 保存文件路径
+        voice (str, optional): 音色，支持: 冰糖/茉莉/苏打/白桦/Mia/Chloe/Milo/Dean，默认茉莉
+        format (str, optional): 音频格式，默认 wav
+
+    Returns:
+        bool: 是否成功
+    """
+    try:
+        completion = client.chat.completions.create(
+            model="mimo-v2.5-tts",
+            messages=[
+                {
+                    "role": "user",
+                    "content": "用标准美音发音",
+                },
+                {
+                    "role": "assistant",
+                    "content": text,
+                },
+            ],
+            audio={"format": format, "voice": voice},
+        )
+
+        message = completion.choices[0].message
+        audio_bytes = base64.b64decode(message.audio.data)
+
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        with open(save_path, "wb") as f:
+            f.write(audio_bytes)
+        return True
+    except Exception as e:
+        print(f"❌ TTS 合成失败: {e}")
+        return False
+
+
+def generate_sentence_audio(word, data_dir, examples):
+    """为单词的例句生成音频
+
+    Args:
+        word (str): 单词
+        data_dir (str): 数据目录
+        examples (list): 例句列表 [{"sentence": "...", ...}, ...]
+
+    Returns:
+        list: 成功生成的文件路径列表
+    """
+    word_dir = os.path.join(data_dir, word)
+    generated = []
+
+    for i, example in enumerate(examples):
+        sentence = example.get("sentence", "")
+        if not sentence:
+            continue
+
+        filename = f"sentence-audit-{i + 1}.wav"
+        save_path = os.path.join(word_dir, filename)
+
+        # 已存在则跳过
+        if os.path.exists(save_path):
+            generated.append(filename)
+            continue
+
+        if tts_builtin_non_stream(sentence, save_path):
+            generated.append(filename)
+            print(f"🔊 例句音频已生成: {filename}")
+        else:
+            print(f"⚠️ 例句音频生成失败: {filename}")
+
+    return generated
+
 
 # chat 基础函数
 def chat(system_message, user_message, model="mimo-v2.5", temperature=0.5, max_tokens=2048, response_format=None):
@@ -196,5 +249,5 @@ if __name__ == "__main__":
         print("请先在 .env 中设置 sk 或设置环境变量 MIMO_API_KEY")
         exit(1)
 
-    # 1. 内置语音 - 非流式
-    tts_builtin_non_stream()
+    # 测试 TTS
+    tts_builtin_non_stream("Hello, how are you?", "test_output.wav")

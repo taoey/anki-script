@@ -17,7 +17,7 @@ load_dotenv()
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from util.mimo import explain_word
+from util.mimo import explain_word, generate_sentence_audio
 from util.audio import get_audio
 
 app = Flask(__name__)
@@ -82,6 +82,10 @@ def get_word(word):
                     data['created_at_str'] = meta.get('created_at_str', '')
             # 确保音频也已缓存
             get_audio(word, DATA_DIR)
+            # 确保例句音频已生成
+            examples = data.get("examples", [])
+            if examples:
+                generate_sentence_audio(word, DATA_DIR, examples)
             return jsonify({"status": "ok", "data": data, "source": "cache"})
         except Exception as e:
             return jsonify({"status": "error", "message": f"读取缓存失败: {str(e)}"}), 500
@@ -117,6 +121,11 @@ def get_word(word):
     # 下载并缓存发音音频
     get_audio(word, DATA_DIR)
 
+    # 生成例句音频
+    examples = result.get("examples", [])
+    if examples:
+        generate_sentence_audio(word, DATA_DIR, examples)
+
     return jsonify({"status": "ok", "data": result, "source": "api"})
 
 
@@ -131,6 +140,22 @@ def get_word_audio(word):
         return jsonify({"status": "error", "message": "音频获取失败"}), 500
 
     return Response(data, mimetype="audio/mpeg")
+
+
+@app.route("/api/audio/<word>/sentence/<int:index>", methods=["GET"])
+@require_auth
+def get_sentence_audio(word, index):
+    """获取例句音频"""
+    word = word.lower().strip()
+    audio_path = os.path.join(DATA_DIR, word, f"sentence-audit-{index}.wav")
+
+    if not os.path.exists(audio_path):
+        return jsonify({"status": "error", "message": "音频不存在"}), 404
+
+    with open(audio_path, "rb") as f:
+        data = f.read()
+
+    return Response(data, mimetype="audio/wav")
 
 
 @app.route("/words", methods=["GET"])
