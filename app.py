@@ -7,6 +7,7 @@ Flask API 服务
 import os
 import sys
 import json
+import time
 from flask import Flask, jsonify, request, render_template
 from dotenv import load_dotenv
 
@@ -47,7 +48,7 @@ def get_word(word):
     """
     word = word.lower().strip()
     word_dir = os.path.join(DATA_DIR, word)
-    json_path = os.path.join(word_dir, f"{word}.json")
+    json_path = os.path.join(word_dir, "word.json")
 
     # 检查本地是否已有缓存
     if os.path.exists(json_path):
@@ -69,6 +70,16 @@ def get_word(word):
         os.makedirs(word_dir, exist_ok=True)
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
+
+        # 保存 meta.json（包含时间戳）
+        meta_path = os.path.join(word_dir, "meta.json")
+        meta_data = {
+            "word": word,
+            "created_at": time.time(),
+            "created_at_str": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta_data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"保存缓存失败: {e}")
 
@@ -102,12 +113,33 @@ def get_words_list():
     try:
         for word_dir in os.listdir(DATA_DIR):
             word_path = os.path.join(DATA_DIR, word_dir)
-            json_path = os.path.join(word_path, f"{word_dir}.json")
+            json_path = os.path.join(word_path, "word.json")
+            meta_path = os.path.join(word_path, "meta.json")
 
             # 检查是否是目录且包含 JSON 文件
             if os.path.isdir(word_path) and os.path.exists(json_path):
                 with open(json_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+
+                # 读取 meta.json 获取时间戳
+                created_at = 0
+                if os.path.exists(meta_path):
+                    with open(meta_path, 'r', encoding='utf-8') as f:
+                        meta = json.load(f)
+                        created_at = meta.get("created_at", 0)
+                else:
+                    # 如果没有 meta.json，使用文件修改时间并创建
+                    created_at = os.path.getmtime(json_path)
+                    try:
+                        meta_data = {
+                            "word": word_dir,
+                            "created_at": created_at,
+                            "created_at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at))
+                        }
+                        with open(meta_path, 'w', encoding='utf-8') as f:
+                            json.dump(meta_data, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
 
                 # 提取摘要信息
                 definitions = data.get("definitions", [])
@@ -118,11 +150,12 @@ def get_words_list():
                     "phonetic": data.get("phonetic", ""),
                     "meaning": first_meaning,
                     "definition_count": len(definitions),
-                    "phrase_count": len(data.get("phrases", []))
+                    "phrase_count": len(data.get("phrases", [])),
+                    "created_at": created_at
                 })
 
-        # 按字母排序
-        words.sort(key=lambda x: x["word"])
+        # 按时间戳倒序排序（新添加的在最上面）
+        words.sort(key=lambda x: x.get("created_at", 0), reverse=True)
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

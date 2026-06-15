@@ -276,15 +276,23 @@
 
         @media (max-width: 900px) {
             .arrow-nav {
-                position: static;
+                position: fixed;
+                bottom: 30px;
+                top: auto;
                 transform: none;
-                display: flex;
-                justify-content: center;
-                gap: 20px;
-                margin-top: 20px;
+                z-index: 100;
+            }
+            .arrow-left {
+                left: 30px;
+            }
+            .arrow-right {
+                right: 30px;
             }
             .arrow-label {
                 display: none;
+            }
+            body {
+                padding-bottom: 100px;
             }
         }
     </style>
