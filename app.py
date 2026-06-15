@@ -8,7 +8,8 @@ import os
 import sys
 import json
 import time
-from flask import Flask, jsonify, request, render_template
+from functools import wraps
+from flask import Flask, jsonify, request, Response, render_template
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,31 +22,47 @@ from util.mimo import explain_word
 app = Flask(__name__)
 
 PORT = int(os.getenv("PORT", 8076))
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "anki2024")
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+def check_auth(password):
+    """检查密码是否正确"""
+    return password == AUTH_PASSWORD
+
+
+def require_auth(f):
+    """认证装饰器 - 使用 HTTP Basic Auth"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.password):
+            return Response(
+                '请输入密码访问',
+                401,
+                {'WWW-Authenticate': 'Basic realm="Login Required"'}
+            )
+        return f(*args, **kwargs)
+    return decorated
 
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    """健康检查接口"""
+    """健康检查接口（不需要认证）"""
     return jsonify({"status": "ok", "message": "pong"})
 
 
 @app.route("/", methods=["GET"])
+@require_auth
 def index():
     """首页"""
     return render_template("index.html")
 
 
 @app.route("/api/word/<word>", methods=["GET"])
+@require_auth
 def get_word(word):
-    """查询单词解释
-
-    Args:
-        word: 要查询的英语单词
-
-    Returns:
-        JSON: 单词解释数据
-    """
+    """查询单词解释"""
     word = word.lower().strip()
     word_dir = os.path.join(DATA_DIR, word)
     json_path = os.path.join(word_dir, "word.json")
@@ -87,24 +104,23 @@ def get_word(word):
 
 
 @app.route("/words", methods=["GET"])
+@require_auth
 def words_page():
     """单词列表页面"""
     return render_template("words.html")
 
 
 @app.route("/word/<word>", methods=["GET"])
+@require_auth
 def word_detail_page(word):
     """单词详情页面"""
     return render_template("word_detail.html", word=word)
 
 
 @app.route("/api/words", methods=["GET"])
+@require_auth
 def get_words_list():
-    """获取所有已查询的单词列表
-
-    Returns:
-        JSON: 单词列表
-    """
+    """获取所有已查询的单词列表"""
     words = []
 
     if not os.path.exists(DATA_DIR):
