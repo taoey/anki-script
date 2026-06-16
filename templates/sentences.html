@@ -100,13 +100,15 @@
             font-size: 1.1rem;
             color: #333;
             margin-bottom: 8px;
-            line-height: 1.5;
+            line-height: 1.6;
+            text-align: left;
         }
 
         .sentence-translation {
             color: #666;
             font-size: 0.95rem;
-            line-height: 1.4;
+            line-height: 1.5;
+            text-align: left;
         }
 
         .sentence-stats {
@@ -236,8 +238,16 @@
         function highlightWords(text) {
             if (!existingWords.size) return text;
             return text.replace(/\b([a-zA-Z]+)\b/g, (match, word) => {
-                if (existingWords.has(word.toLowerCase())) {
-                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${word.toLowerCase()}'">${match}</span>`;
+                const lower = word.toLowerCase();
+                // 精确匹配优先
+                if (existingWords.has(lower)) {
+                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${lower}'">${match}</span>`;
+                }
+                // 包含匹配：单词中包含已收录的单词
+                for (const ew of existingWords) {
+                    if (lower.includes(ew)) {
+                        return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${ew}'">${match}</span>`;
+                    }
                 }
                 return match;
             });
@@ -274,11 +284,6 @@
                         <div class="sentence-original">${highlightWords(s.original)}</div>
                         <div class="sentence-translation">${s.translation || ''}</div>
                     </div>
-                    <div class="sentence-stats">
-                        <span class="stat-badge">${s.key_word_count} 重点词</span>
-                    </div>
-                    <button class="play-btn" onclick="event.preventDefault(); event.stopPropagation(); playAudio('${s.dir_name}', this)" title="播放发音">▶</button>
-                    <span class="arrow">→</span>
                 </a>
             `).join('');
 

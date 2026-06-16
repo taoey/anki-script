@@ -127,24 +127,33 @@
         }
 
         .section {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #f0f0f0;
         }
 
         .section-title {
-            font-size: 1.4rem;
-            color: #333;
-            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
         }
 
         .section-title::before {
             content: '';
-            width: 5px;
-            height: 24px;
+            width: 4px;
+            height: 18px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 3px;
+            border-radius: 2px;
+            flex-shrink: 0;
         }
 
         .definition {
@@ -206,21 +215,26 @@
 
         .example {
             background: #f8f9fa;
-            padding: 25px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 5px solid #667eea;
+            padding: 15px 18px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 3px solid #667eea;
+            text-align: left;
+        }
+
+        .example:last-child {
+            margin-bottom: 0;
         }
 
         .example-header {
             display: flex;
             align-items: flex-start;
             gap: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .example-sentence {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             color: #333;
             line-height: 1.7;
             flex: 1;
@@ -257,15 +271,14 @@
 
         .example-source {
             color: #667eea;
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
         }
 
         .example-translation {
             color: #666;
-            font-size: 1rem;
-            line-height: 1.5;
+            font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         .loading {
@@ -443,8 +456,16 @@
         function highlightWords(text) {
             if (!existingWords.size) return text;
             return text.replace(/\b([a-zA-Z]+)\b/g, (match, word) => {
-                if (existingWords.has(word.toLowerCase())) {
-                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${word.toLowerCase()}'">${match}</span>`;
+                const lower = word.toLowerCase();
+                // 精确匹配优先
+                if (existingWords.has(lower)) {
+                    return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${lower}'">${match}</span>`;
+                }
+                // 包含匹配：单词中包含已收录的单词
+                for (const ew of existingWords) {
+                    if (lower.includes(ew)) {
+                        return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${ew}'">${match}</span>`;
+                    }
                 }
                 return match;
             });

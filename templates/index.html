@@ -381,24 +381,33 @@
         }
 
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #f0f0f0;
         }
 
         .section-title {
-            font-size: 1.3rem;
-            color: #333;
-            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
         }
 
         .section-title::before {
             content: '';
             width: 4px;
-            height: 20px;
+            height: 18px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 2px;
+            flex-shrink: 0;
         }
 
         .definition {
@@ -452,47 +461,48 @@
 
         .example {
             background: #f8f9fa;
-            padding: 20px;
+            padding: 15px 18px;
             border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 4px solid #667eea;
+            margin-bottom: 12px;
+            border-left: 3px solid #667eea;
+            text-align: left;
+        }
+
+        .example:last-child {
+            margin-bottom: 0;
         }
 
         .example-sentence {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: #333;
-            line-height: 1.6;
-            margin-bottom: 10px;
+            line-height: 1.7;
+            margin-bottom: 8px;
         }
 
         .example-source {
             color: #667eea;
-            font-size: 0.9rem;
-            margin-bottom: 5px;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
         }
 
         .example-translation {
             color: #666;
             font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         .sentence-original {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             color: #333;
-            line-height: 1.6;
-            border-left: 4px solid #667eea;
+            line-height: 1.8;
+            text-align: left;
         }
 
         .sentence-translation {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            color: #333;
-            line-height: 1.6;
+            font-size: 1.05rem;
+            color: #555;
+            line-height: 1.8;
+            text-align: left;
         }
 
         .word-link {
