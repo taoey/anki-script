@@ -567,12 +567,53 @@
             border-radius: 8px;
             text-align: center;
         }
+
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 20px;
+            }
+            .top-bar {
+                position: static;
+                justify-content: flex-end;
+                margin-bottom: 20px;
+                gap: 6px;
+            }
+            .nav-link {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                border-width: 1px;
+                border-radius: 6px;
+            }
+            .settings-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                border-width: 1px;
+                border-radius: 6px;
+            }
+            .search-box {
+                padding: 20px;
+            }
+            .input-group button {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+            .result {
+                padding: 20px 15px;
+            }
+            .section {
+                padding: 15px;
+            }
+            .word {
+                font-size: 2rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="top-bar">
-        <a href="/words" class="nav-link">📖 单词列表</a>
-        <a href="/sentences" class="nav-link">📝 句子列表</a>
+        <a href="/words" class="nav-link">单词列表</a>
+        <a href="/sentences" class="nav-link">句子列表</a>
         <button class="settings-btn" onclick="openSettings()">配置</button>
     </div>
 
@@ -591,7 +632,7 @@
         </div>
     </div>
     <div class="container">
-        <h1>📚 英语小助手</h1>
+        <h1>英语小助手</h1>
 
         <div class="search-box">
             <div class="input-group">

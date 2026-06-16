@@ -28,7 +28,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         h1 {
@@ -66,9 +66,7 @@
 
         .word-header {
             text-align: center;
-            margin-bottom: 35px;
-            padding-bottom: 25px;
-            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 25px;
         }
 
         .word {
@@ -110,6 +108,20 @@
 
         .play-btn.playing {
             animation: pulse 1s infinite;
+        }
+
+        .header-play-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid white;
+            margin-top: 0;
+            width: 32px;
+            height: 32px;
+            font-size: 0.8rem;
+        }
+
+        .header-play-btn:hover {
+            background: white;
+            color: #667eea;
         }
 
         @keyframes pulse {
@@ -380,6 +392,32 @@
         }
 
         @media (max-width: 900px) {
+            .content {
+                padding: 20px 15px;
+            }
+            .section {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            .word {
+                font-size: 2rem;
+            }
+            .phonetic {
+                font-size: 1.1rem;
+            }
+            .nav-btns {
+                gap: 6px;
+                flex-wrap: nowrap;
+            }
+            .nav-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                border-width: 1px;
+                border-radius: 6px;
+                white-space: nowrap;
+            }
             .arrow-nav {
                 position: fixed;
                 bottom: 30px;
@@ -415,11 +453,11 @@
 
     <div class="container">
         <div class="header">
-            <h1 id="pageTitle">📖 单词详情</h1>
+            <button class="play-btn header-play-btn" id="headerPlayBtn" onclick="playAudio(word, this)" title="播放发音" style="display:none;">▶</button>
             <div class="nav-btns">
-                <a href="/words" class="nav-btn">📖 单词列表</a>
-                <a href="/sentences" class="nav-btn">📝 句子列表</a>
-                <a href="/" class="nav-btn">🔍 查询</a>
+                <a href="/words" class="nav-btn">单词列表</a>
+                <a href="/sentences" class="nav-btn">句子列表</a>
+                <a href="/" class="nav-btn">查询</a>
             </div>
         </div>
 
@@ -436,7 +474,6 @@
         let currentIndex = -1;
 
         document.getElementById('title').textContent = `${word} - 单词详情`;
-        document.getElementById('pageTitle').textContent = `📖 ${word}`;
 
         // 单词高亮相关
         let existingWords = new Set();
@@ -540,11 +577,13 @@
         }
 
         function renderWord(data) {
+            // 显示顶部播放按钮
+            document.getElementById('headerPlayBtn').style.display = 'inline-flex';
+
             let html = `
                 <div class="word-header">
                     <div class="word">${data.word}</div>
                     <div class="phonetic">${data.phonetic || ''}</div>
-                    <button class="play-btn" onclick="playAudio('${data.word}', this)" title="播放发音">▶</button>
                 </div>
             `;
 
@@ -592,7 +631,7 @@
                                     <div class="example-sentence">${highlightWords(e.sentence)}</div>
                                     <button class="sentence-play-btn" onclick="playSentenceAudio('${data.word}', ${i + 1}, this)" title="播放例句">▶</button>
                                 </div>
-                                ${e.source ? `<div class="example-source">🎬 ${e.source}</div>` : ''}
+                                ${e.source ? `<div class="example-source">${e.source}</div>` : ''}
                                 <div class="example-translation">${e.translation}</div>
                             </div>
                         `).join('')}
@@ -603,7 +642,7 @@
             // 添加时间
             if (data.created_at_str) {
                 html += `
-                    <div class="created-time">📅 添加于 ${data.created_at_str}</div>
+                    <div class="created-time">添加于 ${data.created_at_str}</div>
                 `;
             }
 
@@ -619,43 +658,76 @@
 
         // 播放音频
         let currentAudio = null;
+        let currentPlayingBtn = null;
         function playAudio(word, btn) {
+            // 如果点击的是当前正在播放的按钮，则暂停
+            if (currentAudio && currentPlayingBtn === btn && !currentAudio.paused) {
+                currentAudio.pause();
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+                return;
+            }
+
+            // 停止之前的音频
             if (currentAudio) {
                 currentAudio.pause();
-                document.querySelectorAll('.play-btn.playing').forEach(b => b.classList.remove('playing'));
+                if (currentPlayingBtn) {
+                    currentPlayingBtn.textContent = '▶';
+                    currentPlayingBtn.classList.remove('playing');
+                }
             }
 
             const audio = new Audio(`/api/audio/${encodeURIComponent(word)}`);
             currentAudio = audio;
+            currentPlayingBtn = btn;
+            btn.textContent = '⏸';
             btn.classList.add('playing');
 
             audio.play().catch(err => {
                 console.error('播放失败:', err);
+                btn.textContent = '▶';
                 btn.classList.remove('playing');
             });
 
             audio.addEventListener('ended', () => {
+                btn.textContent = '▶';
                 btn.classList.remove('playing');
             });
         }
 
         // 播放例句音频
         function playSentenceAudio(word, index, btn) {
+            // 如果点击的是当前正在播放的按钮，则暂停
+            if (currentAudio && currentPlayingBtn === btn && !currentAudio.paused) {
+                currentAudio.pause();
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+                return;
+            }
+
+            // 停止之前的音频
             if (currentAudio) {
                 currentAudio.pause();
-                document.querySelectorAll('.play-btn.playing, .sentence-play-btn.playing').forEach(b => b.classList.remove('playing'));
+                if (currentPlayingBtn) {
+                    currentPlayingBtn.textContent = '▶';
+                    currentPlayingBtn.classList.remove('playing');
+                }
             }
 
             const audio = new Audio(`/api/audio/${encodeURIComponent(word)}/sentence/${index}`);
             currentAudio = audio;
+            currentPlayingBtn = btn;
+            btn.textContent = '⏸';
             btn.classList.add('playing');
 
             audio.play().catch(err => {
                 console.error('播放失败:', err);
+                btn.textContent = '▶';
                 btn.classList.remove('playing');
             });
 
             audio.addEventListener('ended', () => {
+                btn.textContent = '▶';
                 btn.classList.remove('playing');
             });
         }

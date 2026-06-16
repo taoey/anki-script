@@ -28,7 +28,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .nav-btns {
@@ -111,61 +111,6 @@
             text-align: left;
         }
 
-        .sentence-stats {
-            display: flex;
-            gap: 15px;
-            margin-left: 20px;
-        }
-
-        .stat-badge {
-            padding: 5px 12px;
-            background: #f0f0f0;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        .play-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border: none;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-size: 0.9rem;
-            cursor: pointer;
-            margin-left: 15px;
-            flex-shrink: 0;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .play-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .play-btn:active {
-            transform: scale(0.95);
-        }
-
-        .play-btn.playing {
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(102, 126, 234, 0); }
-        }
-
-        .arrow {
-            color: #ccc;
-            font-size: 1.2rem;
-            margin-left: 15px;
-        }
-
         .word-link {
             color: #e67e22;
             border-bottom: 1px dashed #e67e22;
@@ -195,15 +140,44 @@
             color: #667eea;
             text-decoration: none;
         }
+
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 1.3rem;
+            }
+            .nav-btns {
+                gap: 6px;
+            }
+            .back-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                border-width: 1px;
+                border-radius: 6px;
+                white-space: nowrap;
+            }
+            .stats {
+                padding: 10px 15px;
+                font-size: 0.95rem;
+            }
+            .sentence-item {
+                padding: 15px;
+            }
+            .sentence-original {
+                font-size: 1rem;
+            }
+            .sentence-translation {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📝 句子列表</h1>
+            <h1>句子列表</h1>
             <div class="nav-btns">
-                <a href="/words" class="back-btn">📖 单词列表</a>
-                <a href="/" class="back-btn">🔍 查询</a>
+                <a href="/words" class="back-btn">单词列表</a>
+                <a href="/" class="back-btn">查询</a>
             </div>
         </div>
 
@@ -291,28 +265,6 @@
         }
 
         loadSentences();
-
-        // 播放音频
-        let currentAudio = null;
-        function playAudio(dirName, btn) {
-            if (currentAudio) {
-                currentAudio.pause();
-                document.querySelectorAll('.play-btn.playing').forEach(b => b.classList.remove('playing'));
-            }
-
-            const audio = new Audio(`/api/audio/sentence/${encodeURIComponent(dirName)}`);
-            currentAudio = audio;
-            btn.classList.add('playing');
-
-            audio.play().catch(err => {
-                console.error('播放失败:', err);
-                btn.classList.remove('playing');
-            });
-
-            audio.addEventListener('ended', () => {
-                btn.classList.remove('playing');
-            });
-        }
     </script>
 </body>
 </html>
