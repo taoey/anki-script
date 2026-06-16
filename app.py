@@ -128,6 +128,8 @@ def get_word(word):
                 if examples:
                     words_dir = os.path.join(DATA_DIR, "words")
                     generate_sentence_audio(dir_name, words_dir, examples)
+            # 查询时也刷新单词列表缓存
+            invalidate_words_cache()
             return jsonify({"status": "ok", "data": data, "source": "cache"})
         except Exception as e:
             return jsonify({"status": "error", "message": f"读取缓存失败: {str(e)}"}), 500
