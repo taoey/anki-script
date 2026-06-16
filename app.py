@@ -214,7 +214,7 @@ def get_word_audio(word):
     if not data:
         return jsonify({"status": "error", "message": "音频获取失败"}), 500
 
-    return Response(data, mimetype="audio/mpeg")
+    return Response(data, mimetype="audio/wav")
 
 
 @app.route("/api/audio/<word>/sentence/<int:index>", methods=["GET"])
