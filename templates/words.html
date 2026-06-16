@@ -31,6 +31,11 @@
             margin-bottom: 30px;
         }
 
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+        }
+
         h1 {
             color: white;
             font-size: 2rem;
@@ -199,7 +204,10 @@
     <div class="container">
         <div class="header">
             <h1>📚 单词列表</h1>
-            <a href="/" class="back-btn">← 返回查询</a>
+            <div class="nav-btns">
+                <a href="/sentences" class="back-btn">📝 句子列表</a>
+                <a href="/" class="back-btn">🔍 查询</a>
+            </div>
         </div>
 
         <div id="stats" class="stats" style="display:none;"></div>
