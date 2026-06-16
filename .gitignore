@@ -225,3 +225,4 @@ app.log
 
 *.wav
 *.tar.gz
+tmp*
