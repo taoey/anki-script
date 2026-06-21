@@ -57,6 +57,21 @@
             color: #667eea;
         }
 
+        .delete-btn {
+            padding: 6px 12px;
+            background: #ff5252;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+
         .content {
             background: white;
             border-radius: 12px;
@@ -420,6 +435,7 @@
                 <a href="/words" class="nav-btn">📖 单词列表</a>
                 <a href="/sentences" class="nav-btn">📝 句子列表</a>
                 <a href="/" class="nav-btn">🔍 查询</a>
+                <button class="delete-btn" id="deleteBtn" onclick="deleteWord()" title="删除单词" style="display:none;">🗑️ 删除</button>
             </div>
         </div>
 
@@ -537,6 +553,7 @@
 
                 if (data.status === 'ok') {
                     renderWord(data.data);
+                    document.getElementById('deleteBtn').style.display = 'inline-block';
                 } else {
                     showError(data.message || '查询失败');
                 }
@@ -680,6 +697,32 @@
         // 初始化
         loadWord();
         initNavigation();
+
+        async function deleteWord() {
+            if (!confirm(`确定要删除单词 "${word}" 吗？`)) return;
+
+            try {
+                const res = await fetch(`/api/word/${encodeURIComponent(word)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    // 跳转到单词列表页，如果没有上一个/下一个则回列表
+                    if (currentIndex > 0 && wordsList.length > 1) {
+                        window.location.href = `/word/${wordsList[currentIndex - 1]}`;
+                    } else if (currentIndex < wordsList.length - 1) {
+                        window.location.href = `/word/${wordsList[currentIndex + 1]}`;
+                    } else {
+                        window.location.href = '/words';
+                    }
+                } else {
+                    alert('删除失败: ' + (data.message || '未知错误'));
+                }
+            } catch (err) {
+                console.error('删除单词失败:', err);
+                alert('删除失败，请重试');
+            }
+        }
     </script>
 </body>
 </html>

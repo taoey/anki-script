@@ -474,6 +474,25 @@ def get_existing_words():
     return jsonify({"status": "ok", "data": words})
 
 
+@app.route("/api/word/<word>", methods=["DELETE"])
+@require_auth
+def delete_word(word):
+    """删除单词"""
+    import shutil
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_path = os.path.join(words_dir, word.lower())
+
+    if not os.path.exists(word_path):
+        return jsonify({"status": "error", "message": "单词不存在"}), 404
+
+    try:
+        shutil.rmtree(word_path)
+        invalidate_words_cache()
+        return jsonify({"status": "ok", "message": "删除成功"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/sentence/<dir_name>", methods=["DELETE"])
 @require_auth
 def delete_sentence(dir_name):
