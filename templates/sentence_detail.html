@@ -356,12 +356,6 @@
             border-bottom: none;
         }
 
-        .loading {
-            text-align: center;
-            padding: 80px;
-            color: white;
-            font-size: 1.3rem;
-        }
 
         .error {
             background: #ffebee;
@@ -961,8 +955,6 @@
             </div>
         </div>
 
-        <div id="loading" class="loading">加载中</div>
-
         <div id="content" class="content" style="display:none;"></div>
 
         <!-- 隐藏的文件输入 -->
@@ -1091,16 +1083,16 @@
                 const response = await fetch(`/api/sentence/${encodeURIComponent(dirName)}`);
                 const data = await response.json();
 
-                document.getElementById('loading').style.display = 'none';
-
                 if (data.status === 'ok') {
                     renderSentence(data.data);
+                    return data.data;
                 } else {
                     showError(data.message || '查询失败');
+                    return null;
                 }
             } catch (err) {
-                document.getElementById('loading').style.display = 'none';
                 showError('网络错误，请重试');
+                return null;
             }
         }
 
@@ -1117,16 +1109,28 @@
                 </div>
             `;
 
-            // 图片模块（紧跟句子之后）
+            // 图片模块（紧跟句子之后，直接渲染）
+            currentImages = data.images || [];
+            const imageGridHtml = currentImages.length > 0
+                ? currentImages.map((img, index) => `
+                    <div class="image-item" onclick="openLightbox(${index})">
+                        <img src="/api/sentence/${encodeURIComponent(dirName)}/images/${img.filename}" alt="${img.original_name}" loading="lazy">
+                        <div class="image-item-overlay">
+                            <div class="image-item-note">${img.note || '点击查看详情'}</div>
+                        </div>
+                        <button class="image-item-delete" onclick="deleteImage('${img.filename}', event)" title="删除图片">✕</button>
+                    </div>
+                `).join('')
+                : '<div class="image-empty">暂无图片，点击上方按钮上传记录</div>';
             html += `
-                <div id="imagesSectionInline" class="images-section-inline" style="display:none;">
+                <div id="imagesSectionInline" class="images-section-inline">
                     <div class="images-header">
                         <div class="images-title">📷 现场记录</div>
                         <button class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
                             <span>+</span> 上传
                         </button>
                     </div>
-                    <div id="imageGridInline" class="image-grid-inline"></div>
+                    <div id="imageGridInline" class="image-grid-inline">${imageGridHtml}</div>
                 </div>
             `;
 
@@ -1391,9 +1395,7 @@
         window.addEventListener('beforeunload', sendStudyRecord);
 
         // 初始化
-        loadSentence().then(() => {
-            loadImages();
-        });
+        loadSentence();
         initNavigation();
 
         // ==================== 图片相关功能 ====================
@@ -1401,27 +1403,18 @@
         let currentImages = [];
         let currentLightboxIndex = -1;
 
-        // 加载图片列表
-        async function loadImages() {
+        // 刷新图片列表（上传/删除后调用）
+        async function refreshImages() {
             try {
                 const response = await fetch(`/api/sentence/${encodeURIComponent(dirName)}`);
                 const data = await response.json();
-
-                if (data.status === 'ok' && data.data.images && data.data.images.length > 0) {
-                    currentImages = data.data.images;
-                    renderImageGrid();
-                    const section = document.getElementById('imagesSectionInline');
-                    if (section) section.style.display = 'block';
+                if (data.status === 'ok') {
+                    currentImages = data.data.images || [];
                 } else {
                     currentImages = [];
-                    renderImageGrid();
-                    // 没有图片时也显示模块（显示上传提示）
-                    const section = document.getElementById('imagesSectionInline');
-                    if (section) section.style.display = 'block';
                 }
-            } catch (err) {
-                console.error('加载图片失败:', err);
-            }
+            } catch { currentImages = []; }
+            renderImageGrid();
         }
 
         // 渲染图片网格
@@ -1491,7 +1484,7 @@
             document.getElementById('imageInput').value = '';
 
             // 重新加载图片
-            await loadImages();
+            await refreshImages();
         }
 
         // 删除图片
@@ -1507,7 +1500,7 @@
 
                 const data = await response.json();
                 if (data.status === 'ok') {
-                    await loadImages();
+                    await refreshImages();
                 } else {
                     alert('删除失败: ' + data.message);
                 }

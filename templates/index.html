@@ -539,29 +539,6 @@
             color: #666;
         }
 
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #667eea;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         .error {
             background: #ffebee;
             color: #c62828;
@@ -645,7 +622,6 @@
         </div>
 
         <div id="result" class="result">
-            <div id="loading" class="loading" style="display:none;">查询中</div>
             <div id="error" class="error" style="display:none;"></div>
             <div id="content"></div>
         </div>
@@ -655,7 +631,6 @@
         const wordInput = document.getElementById('wordInput');
         const searchBtn = document.getElementById('searchBtn');
         const resultDiv = document.getElementById('result');
-        const loadingDiv = document.getElementById('loading');
         const errorDiv = document.getElementById('error');
         const contentDiv = document.getElementById('content');
 
@@ -706,10 +681,8 @@
             const word = wordInput.value.trim();
             if (!word) return;
 
-            // 显示加载状态
             searchBtn.disabled = true;
             resultDiv.classList.add('show');
-            loadingDiv.style.display = 'block';
             errorDiv.style.display = 'none';
             contentDiv.innerHTML = '';
 
@@ -731,7 +704,6 @@
                 showError('网络错误，请重试');
             } finally {
                 searchBtn.disabled = false;
-                loadingDiv.style.display = 'none';
             }
         }
 

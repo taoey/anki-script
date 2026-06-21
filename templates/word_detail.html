@@ -419,30 +419,6 @@
             background: #e0e0e0;
         }
 
-        .loading {
-            text-align: center;
-            padding: 80px;
-            color: white;
-            font-size: 1.3rem;
-        }
-
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid white;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 12px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         .error {
             background: #ffebee;
             color: #c62828;
@@ -1049,8 +1025,6 @@
             </div>
         </div>
 
-        <div id="loading" class="loading">加载中</div>
-
         <div id="content" class="content" style="display:none;"></div>
 
         <!-- 隐藏的文件输入 -->
@@ -1181,8 +1155,6 @@
                 });
                 const data = await response.json();
 
-                document.getElementById('loading').style.display = 'none';
-
                 if (data.status === 'ok') {
                     renderWord(data.data);
                     document.getElementById('deleteBtn').style.display = 'inline-block';
@@ -1190,7 +1162,6 @@
                     showError(data.message || '查询失败');
                 }
             } catch (err) {
-                document.getElementById('loading').style.display = 'none';
                 showError('网络错误，请重试');
             }
         }
