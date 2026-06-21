@@ -271,6 +271,121 @@
             line-height: 1.6;
         }
 
+        /* 助记样式 */
+        .mnemonic-section {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .mnemonic-section .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mnemonic-edit-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .mnemonic-edit-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .mnemonic-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mnemonic-item:last-child {
+            border-bottom: none;
+        }
+
+        .mnemonic-label {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .mnemonic-text {
+            color: #000;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .mnemonic-edit textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .mnemonic-edit textarea::placeholder {
+            color: #999;
+        }
+
+        .mnemonic-edit textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+        }
+
+        .mnemonic-edit-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .mnemonic-edit-actions button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-cancel:hover {
+            background: #e0e0e0;
+        }
+
         .loading {
             text-align: center;
             padding: 80px;
@@ -623,6 +738,47 @@
                 `;
             }
 
+            // 助记
+            if (data.mnemonic) {
+                html += `
+                    <div class="section mnemonic-section">
+                        <div class="section-title">
+                            助记
+                            <button class="mnemonic-edit-btn" onclick="toggleMnemonicEdit('${data.word}')" title="编辑助记">✏️</button>
+                        </div>
+                        <div class="mnemonic-display" id="mnemonic-display">
+                            ${data.mnemonic.etymology ? `
+                                <div class="mnemonic-item">
+                                    <span class="mnemonic-label">词源</span>
+                                    <span class="mnemonic-text">${data.mnemonic.etymology}</span>
+                                </div>
+                            ` : ''}
+                            ${data.mnemonic.association ? `
+                                <div class="mnemonic-item">
+                                    <span class="mnemonic-label">联想</span>
+                                    <span class="mnemonic-text">${data.mnemonic.association}</span>
+                                </div>
+                            ` : ''}
+                            ${data.mnemonic.tips ? `
+                                <div class="mnemonic-item">
+                                    <span class="mnemonic-label">技巧</span>
+                                    <span class="mnemonic-text">${data.mnemonic.tips}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="mnemonic-edit" id="mnemonic-edit" style="display:none;">
+                            <textarea id="mnemonic-etymology" placeholder="词源/词根词缀">${data.mnemonic.etymology || ''}</textarea>
+                            <textarea id="mnemonic-association" placeholder="谐音/联想记忆">${data.mnemonic.association || ''}</textarea>
+                            <textarea id="mnemonic-tips" placeholder="记忆技巧">${data.mnemonic.tips || ''}</textarea>
+                            <div class="mnemonic-edit-actions">
+                                <button class="btn-save" onclick="saveMnemonic('${data.word}')">保存</button>
+                                <button class="btn-cancel" onclick="toggleMnemonicEdit('${data.word}')">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             // 添加时间
             if (data.created_at_str) {
                 html += `
@@ -692,6 +848,67 @@
                 btn.textContent = '▶';
                 btn.classList.remove('playing');
             });
+        }
+
+        // 助记编辑
+        function toggleMnemonicEdit(word) {
+            const display = document.getElementById('mnemonic-display');
+            const edit = document.getElementById('mnemonic-edit');
+            const editBtn = document.querySelector('.mnemonic-edit-btn');
+
+            if (edit.style.display === 'none') {
+                display.style.display = 'none';
+                edit.style.display = 'block';
+                editBtn.textContent = '✕';
+                editBtn.title = '取消编辑';
+            } else {
+                display.style.display = 'block';
+                edit.style.display = 'none';
+                editBtn.textContent = '✏️';
+                editBtn.title = '编辑助记';
+            }
+        }
+
+        async function saveMnemonic(word) {
+            const etymology = document.getElementById('mnemonic-etymology').value.trim();
+            const association = document.getElementById('mnemonic-association').value.trim();
+            const tips = document.getElementById('mnemonic-tips').value.trim();
+
+            const mnemonic = {};
+            if (etymology) mnemonic.etymology = etymology;
+            if (association) mnemonic.association = association;
+            if (tips) mnemonic.tips = tips;
+
+            try {
+                const res = await fetch(`/api/word/${encodeURIComponent(word)}/mnemonic`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mnemonic })
+                });
+                const data = await res.json();
+
+                if (data.status === 'ok') {
+                    // 更新显示
+                    const display = document.getElementById('mnemonic-display');
+                    let displayHtml = '';
+                    if (mnemonic.etymology) {
+                        displayHtml += `<div class="mnemonic-item"><span class="mnemonic-label">词源</span><span class="mnemonic-text">${mnemonic.etymology}</span></div>`;
+                    }
+                    if (mnemonic.association) {
+                        displayHtml += `<div class="mnemonic-item"><span class="mnemonic-label">联想</span><span class="mnemonic-text">${mnemonic.association}</span></div>`;
+                    }
+                    if (mnemonic.tips) {
+                        displayHtml += `<div class="mnemonic-item"><span class="mnemonic-label">技巧</span><span class="mnemonic-text">${mnemonic.tips}</span></div>`;
+                    }
+                    display.innerHTML = displayHtml;
+
+                    toggleMnemonicEdit(word);
+                } else {
+                    alert('保存失败: ' + data.message);
+                }
+            } catch (err) {
+                alert('网络错误，请重试');
+            }
         }
 
         // 初始化

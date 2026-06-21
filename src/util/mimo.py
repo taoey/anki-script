@@ -257,7 +257,12 @@ EXAMPLE for word "hello":
       "source": "Cast Away (2000)",
       "translation": "喂？有人在吗？"
     }
-  ]
+  ],
+  "mnemonic": {
+    "etymology": "源自中世纪英语 hallo，模仿打招呼的声音",
+    "association": "hel-lo，想象向别人挥手说\"你好\"",
+    "tips": "最常见的英语问候语，用于见面时打招呼"
+  }
 }
 
 RULES:
@@ -265,7 +270,9 @@ RULES:
 2. JSON must start with { and end with }
 3. Include 1-3 definitions, 3-6 phrases, 3 examples
 4. Examples preferably from movies/TV shows with source name and year
-5. Use IPA format for phonetic transcription"""
+5. Use IPA format for phonetic transcription
+6. Include mnemonic object with: etymology (词根词缀/词源), association (谐音/联想记忆), tips (记忆技巧)
+7. Mnemonic should be concise and helpful for Chinese learners, in Chinese"""
 
 
 def explain_word(word, max_retries=3):

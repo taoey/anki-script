@@ -493,6 +493,38 @@ def delete_word(word):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/word/<word>/mnemonic", methods=["PUT"])
+@require_auth
+def update_mnemonic(word):
+    """更新单词助记"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_path = os.path.join(words_dir, word.lower())
+    word_json_path = os.path.join(word_path, "word.json")
+
+    if not os.path.exists(word_json_path):
+        return jsonify({"status": "error", "message": "单词不存在"}), 404
+
+    try:
+        data = request.get_json()
+        if not data or "mnemonic" not in data:
+            return jsonify({"status": "error", "message": "缺少 mnemonic 数据"}), 400
+
+        # 读取现有数据
+        with open(word_json_path, 'r', encoding='utf-8') as f:
+            word_data = json.load(f)
+
+        # 更新 mnemonic 字段
+        word_data["mnemonic"] = data["mnemonic"]
+
+        # 保存回文件
+        with open(word_json_path, 'w', encoding='utf-8') as f:
+            json.dump(word_data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "message": "助记更新成功"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/sentence/<dir_name>", methods=["DELETE"])
 @require_auth
 def delete_sentence(dir_name):
