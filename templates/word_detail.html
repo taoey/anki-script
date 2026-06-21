@@ -637,6 +637,323 @@
             .arrow-nav {
                 bottom: 20px;
             }
+            .image-upload-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            .image-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .image-note-input {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* 图片模块样式 */
+        .images-section {
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #f0f0f0;
+        }
+
+        .images-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .images-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .images-title::before {
+            content: '';
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .image-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .image-upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .image-upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .image-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-item:hover {
+            transform: scale(1.02);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-item-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .image-item:hover .image-item-overlay {
+            opacity: 1;
+        }
+
+        .image-item-note {
+            color: white;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .image-item-delete {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .image-item:hover .image-item-delete {
+            opacity: 1;
+        }
+
+        .image-empty {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Lightbox 样式 */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            z-index: 1001;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .lightbox-image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 60px 20px 120px;
+            overflow: hidden;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .lightbox-prev {
+            left: 20px;
+        }
+
+        .lightbox-next {
+            right: 20px;
+        }
+
+        .lightbox-nav.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .lightbox-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 30px 20px 20px;
+        }
+
+        .lightbox-note {
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .lightbox-note:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .lightbox-note.empty {
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        .lightbox-note-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+        }
+
+        .lightbox-note-input:focus {
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .lightbox-info {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* 上传进度 */
+        .upload-progress {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f7ff;
+            border-radius: 8px;
+            text-align: center;
+            color: #667eea;
+            font-size: 0.9rem;
+        }
+
+        .upload-progress.active {
+            display: block;
+        }
+
+        .image-upload-input {
+            display: none;
         }
     </style>
 </head>
@@ -665,7 +982,34 @@
 
         <div id="content" class="content" style="display:none;"></div>
 
+        <!-- 图片模块 -->
+        <div id="imagesSection" class="images-section" style="display:none;">
+            <div class="images-header">
+                <div class="images-title">📷 现场记录</div>
+                <button class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
+                    <span>+</span> 上传图片
+                </button>
+                <input type="file" id="imageInput" class="image-upload-input" accept="image/*" multiple onchange="handleImageUpload(this.files)">
+            </div>
+            <div id="imageGrid" class="image-grid"></div>
+            <div id="uploadProgress" class="upload-progress">上传中...</div>
+        </div>
+
         <div id="error" class="error" style="display:none;"></div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1, event)">←</button>
+        <button class="lightbox-nav lightbox-next" onclick="navigateLightbox(1, event)">→</button>
+        <div class="lightbox-image-container">
+            <img id="lightboxImage" class="lightbox-image" src="" alt="">
+        </div>
+        <div class="lightbox-footer">
+            <div id="lightboxNote" class="lightbox-note" onclick="editLightboxNote()"></div>
+            <div id="lightboxInfo" class="lightbox-info"></div>
+        </div>
     </div>
 
     <script>
@@ -1028,8 +1372,248 @@
         }
 
         // 初始化
-        loadWord();
+        loadWord().then(() => {
+            loadImages();
+        });
         initNavigation();
+
+        // ==================== 图片相关功能 ====================
+
+        let currentImages = [];
+        let currentLightboxIndex = -1;
+
+        // 加载图片列表
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/word', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word: word })
+                });
+                const data = await response.json();
+
+                if (data.status === 'ok' && data.data.images && data.data.images.length > 0) {
+                    currentImages = data.data.images;
+                    renderImageGrid();
+                    document.getElementById('imagesSection').style.display = 'block';
+                } else {
+                    currentImages = [];
+                    renderImageGrid();
+                    document.getElementById('imagesSection').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('加载图片失败:', err);
+            }
+        }
+
+        // 渲染图片网格
+        function renderImageGrid() {
+            const grid = document.getElementById('imageGrid');
+
+            if (currentImages.length === 0) {
+                grid.innerHTML = '<div class="image-empty">暂无图片，点击上方按钮上传</div>';
+                return;
+            }
+
+            grid.innerHTML = currentImages.map((img, index) => `
+                <div class="image-item" onclick="openLightbox(${index})">
+                    <img src="/api/word/${encodeURIComponent(word)}/images/${img.thumb_filename}" alt="${img.original_name}" loading="lazy">
+                    <div class="image-item-overlay">
+                        <div class="image-item-note">${img.note || '点击查看详情'}</div>
+                    </div>
+                    <button class="image-item-delete" onclick="deleteImage('${img.filename}', event)" title="删除图片">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // 处理图片上传
+        async function handleImageUpload(files) {
+            if (!files || files.length === 0) return;
+
+            const progress = document.getElementById('uploadProgress');
+            const uploadBtn = document.querySelector('.image-upload-btn');
+
+            progress.classList.add('active');
+            progress.textContent = '上传中...';
+            uploadBtn.disabled = true;
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('image', file);
+
+                    const response = await fetch(`/api/word/${encodeURIComponent(word)}/images`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        successCount++;
+                    } else {
+                        failCount++;
+                        console.error('上传失败:', data.message);
+                    }
+                } catch (err) {
+                    failCount++;
+                    console.error('上传错误:', err);
+                }
+            }
+
+            progress.textContent = `上传完成：${successCount} 成功，${failCount} 失败`;
+            setTimeout(() => {
+                progress.classList.remove('active');
+            }, 3000);
+
+            uploadBtn.disabled = false;
+            document.getElementById('imageInput').value = '';
+
+            // 重新加载图片
+            await loadImages();
+        }
+
+        // 删除图片
+        async function deleteImage(filename, event) {
+            event.stopPropagation();
+
+            if (!confirm('确定要删除这张图片吗？')) return;
+
+            try {
+                const response = await fetch(`/api/word/${encodeURIComponent(word)}/images/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    await loadImages();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            } catch (err) {
+                alert('删除失败，请重试');
+            }
+        }
+
+        // Lightbox 功能
+        function openLightbox(index) {
+            currentLightboxIndex = index;
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('active');
+            updateLightboxContent();
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox(event) {
+            if (event && event.target !== event.currentTarget) return;
+
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+            currentLightboxIndex = -1;
+        }
+
+        function navigateLightbox(direction, event) {
+            event.stopPropagation();
+
+            const newIndex = currentLightboxIndex + direction;
+            if (newIndex >= 0 && newIndex < currentImages.length) {
+                currentLightboxIndex = newIndex;
+                updateLightboxContent();
+            }
+        }
+
+        function updateLightboxContent() {
+            const img = currentImages[currentLightboxIndex];
+            const lightboxImage = document.getElementById('lightboxImage');
+            const lightboxNote = document.getElementById('lightboxNote');
+            const lightboxInfo = document.getElementById('lightboxInfo');
+            const prevBtn = document.querySelector('.lightbox-prev');
+            const nextBtn = document.querySelector('.lightbox-next');
+
+            lightboxImage.src = `/api/word/${encodeURIComponent(word)}/images/${img.filename}`;
+
+            if (img.note) {
+                lightboxNote.textContent = img.note;
+                lightboxNote.classList.remove('empty');
+            } else {
+                lightboxNote.textContent = '点击添加备注';
+                lightboxNote.classList.add('empty');
+            }
+
+            lightboxInfo.textContent = `${currentLightboxIndex + 1} / ${currentImages.length} · ${img.uploaded_at_str}`;
+
+            // 更新导航按钮状态
+            prevBtn.classList.toggle('disabled', currentLightboxIndex === 0);
+            nextBtn.classList.toggle('disabled', currentLightboxIndex === currentImages.length - 1);
+        }
+
+        // 编辑 Lightbox 备注
+        function editLightboxNote() {
+            const lightboxNote = document.getElementById('lightboxNote');
+            const img = currentImages[currentLightboxIndex];
+            const currentNote = img.note || '';
+
+            lightboxNote.innerHTML = `
+                <input type="text" class="lightbox-note-input" value="${currentNote}" placeholder="输入备注（如：在 XX 文章看到）" id="noteInput">
+            `;
+
+            const noteInput = document.getElementById('noteInput');
+            noteInput.focus();
+            noteInput.select();
+
+            noteInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await saveLightboxNote(noteInput.value);
+                } else if (e.key === 'Escape') {
+                    updateLightboxContent();
+                }
+            });
+
+            noteInput.addEventListener('blur', async () => {
+                await saveLightboxNote(noteInput.value);
+            });
+        }
+
+        async function saveLightboxNote(note) {
+            const img = currentImages[currentLightboxIndex];
+
+            try {
+                const response = await fetch(`/api/word/${encodeURIComponent(word)}/images/${img.filename}/note`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note: note })
+                });
+
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    // 更新本地数据
+                    img.note = note;
+                    updateLightboxContent();
+                    renderImageGrid();
+                }
+            } catch (err) {
+                console.error('保存备注失败:', err);
+                updateLightboxContent();
+            }
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            const lightbox = document.getElementById('lightbox');
+            if (!lightbox.classList.contains('active')) return;
+
+            if (e.key === 'Escape') {
+                closeLightbox();
+            } else if (e.key === 'ArrowLeft') {
+                navigateLightbox(-1, e);
+            } else if (e.key === 'ArrowRight') {
+                navigateLightbox(1, e);
+            }
+        });
 
         async function deleteWord() {
             if (!confirm(`确定要删除单词 "${word}" 吗？`)) return;

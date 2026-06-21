@@ -12,6 +12,7 @@ import hashlib
 from functools import wraps
 from flask import Flask, jsonify, request, Response, render_template
 from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
 
@@ -125,6 +126,7 @@ def _do_word_query(word):
                     data['created_at'] = meta.get('created_at', 0)
                     data['created_at_str'] = meta.get('created_at_str', '')
                     data['type'] = meta.get('type', input_type)
+                    data['images'] = meta.get('images', [])
             # 返回目录名（用于句子音频播放）
             if input_type == "sentence":
                 data['dir_name'] = dir_name
@@ -197,6 +199,7 @@ def _do_word_query(word):
         result['created_at'] = created_at
         result['created_at_str'] = created_at_str
         result['type'] = input_type
+        result['images'] = []  # 新查询没有图片
         if input_type == "sentence":
             result['dir_name'] = dir_name
         # 新增内容，清除缓存
@@ -582,6 +585,7 @@ def get_sentence_detail(dir_name):
                 data['type'] = 'sentence'
                 data['tags'] = meta.get('tags', [])
                 data['study'] = meta.get('study', {})
+                data['images'] = meta.get('images', [])
 
         return jsonify({"status": "ok", "data": data})
     except Exception as e:
@@ -979,6 +983,333 @@ def _update_env_file(env_path, key, value):
                 f.write(line)
         if not found:
             f.write(f"{key}={value}\n")
+
+
+# ==================== 图片处理相关 ====================
+
+def compress_image(image_path, max_width=1000, quality=80):
+    """压缩图片，返回压缩后的图片对象"""
+    img = Image.open(image_path)
+
+    # 转换为 RGB（移除 alpha 通道）
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+
+    # 按比例缩放
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_height = int(img.height * ratio)
+        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+    return img
+
+
+def create_thumbnail(image_path, max_width=300, quality=70):
+    """创建缩略图，返回缩略图对象"""
+    img = Image.open(image_path)
+
+    # 转换为 RGB
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+
+    # 按比例缩放
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_height = int(img.height * ratio)
+        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+    return img
+
+
+def save_image_meta(word_dir, image_info):
+    """保存图片信息到 meta.json"""
+    meta_path = os.path.join(word_dir, "meta.json")
+    meta = {}
+
+    if os.path.exists(meta_path):
+        with open(meta_path, 'r', encoding='utf-8') as f:
+            meta = json.load(f)
+
+    images = meta.get("images", [])
+    images.insert(0, image_info)
+    meta["images"] = images
+
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+def remove_image_meta(word_dir, filename):
+    """从 meta.json 中移除图片信息"""
+    meta_path = os.path.join(word_dir, "meta.json")
+    if not os.path.exists(meta_path):
+        return
+
+    with open(meta_path, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+
+    images = meta.get("images", [])
+    meta["images"] = [img for img in images if img.get("filename") != filename]
+
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+def update_image_note(word_dir, filename, note):
+    """更新图片备注"""
+    meta_path = os.path.join(word_dir, "meta.json")
+    if not os.path.exists(meta_path):
+        return False
+
+    with open(meta_path, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+
+    images = meta.get("images", [])
+    for img in images:
+        if img.get("filename") == filename:
+            img["note"] = note
+            break
+    else:
+        return False
+
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+    return True
+
+
+def _handle_image_upload(word_dir, file):
+    """处理图片上传的核心逻辑"""
+    if not file or file.filename == '':
+        return None, "请选择图片"
+
+    # 检查文件类型
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed_extensions:
+        return None, "不支持的图片格式"
+
+    # 创建 images 目录
+    images_dir = os.path.join(word_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+
+    # 生成文件名
+    timestamp = int(time.time())
+    filename = f"{timestamp}.jpg"
+    thumb_filename = f"{timestamp}_thumb.jpg"
+
+    # 保存原图到临时位置
+    temp_path = os.path.join(images_dir, f"temp_{timestamp}")
+    file.save(temp_path)
+
+    try:
+        # 压缩原图
+        img = compress_image(temp_path, max_width=1000, quality=80)
+        original_path = os.path.join(images_dir, filename)
+        img.save(original_path, 'JPEG', quality=80, optimize=True)
+
+        # 生成缩略图
+        thumb = create_thumbnail(temp_path, max_width=300, quality=70)
+        thumb_path = os.path.join(images_dir, thumb_filename)
+        thumb.save(thumb_path, 'JPEG', quality=70, optimize=True)
+
+        # 获取文件大小
+        file_size = os.path.getsize(original_path)
+
+        # 获取图片尺寸
+        width, height = img.size
+
+        # 删除临时文件
+        os.remove(temp_path)
+
+        # 构建图片信息
+        now = time.time()
+        image_info = {
+            "filename": filename,
+            "thumb_filename": thumb_filename,
+            "original_name": file.filename,
+            "note": "",
+            "uploaded_at": now,
+            "uploaded_at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+            "size": file_size,
+            "width": width,
+            "height": height
+        }
+
+        return image_info, None
+
+    except Exception as e:
+        # 清理临时文件
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return None, f"图片处理失败: {str(e)}"
+
+
+# 单词图片上传
+@app.route("/api/word/<word>/images", methods=["POST"])
+@require_auth
+def upload_word_image(word):
+    """上传单词图片"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_dir = os.path.join(words_dir, word.lower())
+
+    if not os.path.exists(os.path.join(word_dir, "word.json")):
+        return jsonify({"status": "error", "message": "单词不存在"}), 404
+
+    file = request.files.get("image")
+    image_info, error = _handle_image_upload(word_dir, file)
+
+    if error:
+        return jsonify({"status": "error", "message": error}), 400
+
+    save_image_meta(word_dir, image_info)
+    return jsonify({"status": "ok", "data": image_info})
+
+
+# 句子图片上传
+@app.route("/api/sentence/<dir_name>/images", methods=["POST"])
+@require_auth
+def upload_sentence_image(dir_name):
+    """上传句子图片"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_dir = os.path.join(sentences_dir, dir_name)
+
+    if not os.path.exists(os.path.join(sentence_dir, "sentence.json")):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    file = request.files.get("image")
+    image_info, error = _handle_image_upload(sentence_dir, file)
+
+    if error:
+        return jsonify({"status": "error", "message": error}), 400
+
+    save_image_meta(sentence_dir, image_info)
+    return jsonify({"status": "ok", "data": image_info})
+
+
+# 获取单词图片
+@app.route("/api/word/<word>/images/<filename>", methods=["GET"])
+@require_auth
+def get_word_image(word, filename):
+    """获取单词图片"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    image_path = os.path.join(words_dir, word.lower(), "images", filename)
+
+    if not os.path.exists(image_path):
+        return jsonify({"status": "error", "message": "图片不存在"}), 404
+
+    with open(image_path, "rb") as f:
+        data = f.read()
+
+    return Response(data, mimetype="image/jpeg")
+
+
+# 获取句子图片
+@app.route("/api/sentence/<dir_name>/images/<filename>", methods=["GET"])
+@require_auth
+def get_sentence_image(dir_name, filename):
+    """获取句子图片"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    image_path = os.path.join(sentences_dir, dir_name, "images", filename)
+
+    if not os.path.exists(image_path):
+        return jsonify({"status": "error", "message": "图片不存在"}), 404
+
+    with open(image_path, "rb") as f:
+        data = f.read()
+
+    return Response(data, mimetype="image/jpeg")
+
+
+# 更新单词图片备注
+@app.route("/api/word/<word>/images/<filename>/note", methods=["PUT"])
+@require_auth
+def update_word_image_note(word, filename):
+    """更新单词图片备注"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_dir = os.path.join(words_dir, word.lower())
+
+    if not os.path.exists(os.path.join(word_dir, "word.json")):
+        return jsonify({"status": "error", "message": "单词不存在"}), 404
+
+    data = request.get_json()
+    note = data.get("note", "")
+
+    if update_image_note(word_dir, filename, note):
+        return jsonify({"status": "ok", "message": "备注已更新"})
+    else:
+        return jsonify({"status": "error", "message": "图片不存在"}), 404
+
+
+# 更新句子图片备注
+@app.route("/api/sentence/<dir_name>/images/<filename>/note", methods=["PUT"])
+@require_auth
+def update_sentence_image_note(dir_name, filename):
+    """更新句子图片备注"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_dir = os.path.join(sentences_dir, dir_name)
+
+    if not os.path.exists(os.path.join(sentence_dir, "sentence.json")):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    data = request.get_json()
+    note = data.get("note", "")
+
+    if update_image_note(sentence_dir, filename, note):
+        return jsonify({"status": "ok", "message": "备注已更新"})
+    else:
+        return jsonify({"status": "error", "message": "图片不存在"}), 404
+
+
+# 删除单词图片
+@app.route("/api/word/<word>/images/<filename>", methods=["DELETE"])
+@require_auth
+def delete_word_image(word, filename):
+    """删除单词图片"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_dir = os.path.join(words_dir, word.lower())
+    images_dir = os.path.join(word_dir, "images")
+
+    # 删除原图
+    image_path = os.path.join(images_dir, filename)
+    if os.path.exists(image_path):
+        os.remove(image_path)
+
+    # 删除缩略图
+    thumb_filename = filename.replace(".jpg", "_thumb.jpg")
+    thumb_path = os.path.join(images_dir, thumb_filename)
+    if os.path.exists(thumb_path):
+        os.remove(thumb_path)
+
+    # 从 meta.json 中移除
+    remove_image_meta(word_dir, filename)
+
+    return jsonify({"status": "ok", "message": "图片已删除"})
+
+
+# 删除句子图片
+@app.route("/api/sentence/<dir_name>/images/<filename>", methods=["DELETE"])
+@require_auth
+def delete_sentence_image(dir_name, filename):
+    """删除句子图片"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_dir = os.path.join(sentences_dir, dir_name)
+    images_dir = os.path.join(sentence_dir, "images")
+
+    # 删除原图
+    image_path = os.path.join(images_dir, filename)
+    if os.path.exists(image_path):
+        os.remove(image_path)
+
+    # 删除缩略图
+    thumb_filename = filename.replace(".jpg", "_thumb.jpg")
+    thumb_path = os.path.join(images_dir, thumb_filename)
+    if os.path.exists(thumb_path):
+        os.remove(thumb_path)
+
+    # 从 meta.json 中移除
+    remove_image_meta(sentence_dir, filename)
+
+    return jsonify({"status": "ok", "message": "图片已删除"})
 
 
 if __name__ == "__main__":
