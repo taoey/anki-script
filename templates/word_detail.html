@@ -522,7 +522,12 @@
 
         async function loadWord() {
             try {
-                const response = await fetch(`/api/word/${encodeURIComponent(word)}`);
+                // 使用 POST 避免 URL 长度限制
+                const response = await fetch('/api/word', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word: word })
+                });
                 const data = await response.json();
 
                 document.getElementById('loading').style.display = 'none';

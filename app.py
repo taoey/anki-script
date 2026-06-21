@@ -79,10 +79,25 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/word", methods=["POST"])
+@require_auth
+def post_word():
+    """通过 POST 查询单词或句子（适用于长文本）"""
+    word = request.json.get("word", "").strip() if request.is_json else ""
+    if not word:
+        return jsonify({"status": "error", "message": "请输入单词或句子"}), 400
+    return _do_word_query(word)
+
+
 @app.route("/api/word/<word>", methods=["GET"])
 @require_auth
 def get_word(word):
     """查询单词或句子"""
+    return _do_word_query(word)
+
+
+def _do_word_query(word):
+    """查询单词或句子的核心逻辑"""
     word = word.strip()
     input_type = classify_input(word)
 
