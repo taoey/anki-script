@@ -438,22 +438,31 @@
 
         function buildTagFilter(sentences) {
             const tagCounts = {};
+            let noTagCount = 0;
             sentences.forEach(s => {
-                (s.tags || []).forEach(t => {
-                    tagCounts[t] = (tagCounts[t] || 0) + 1;
-                });
+                const tags = s.tags || [];
+                if (tags.length === 0) {
+                    noTagCount++;
+                } else {
+                    tags.forEach(t => {
+                        tagCounts[t] = (tagCounts[t] || 0) + 1;
+                    });
+                }
             });
 
             const tags = Object.keys(tagCounts).sort();
-            if (tags.length === 0) return;
+            if (tags.length === 0 && noTagCount === 0) return;
 
             const filterBar = document.getElementById('tagFilterBar');
             const filterList = document.getElementById('tagFilterList');
-            filterList.innerHTML = tags.length > 0
-                ? tags.map(t =>
-                    `<span class="tag-filter-item" data-tag="${t}" onclick="toggleTagFilter('${t.replace(/'/g, "\\'")}')">${t} <span class="tag-count">(${tagCounts[t]})</span></span>`
-                ).join('')
-                : '<span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">暂无标签</span>';
+            let html = '';
+            if (noTagCount > 0) {
+                html += `<span class="tag-filter-item" data-tag="__no_tag__" onclick="toggleTagFilter('__no_tag__')">无标签 <span class="tag-count">(${noTagCount})</span></span>`;
+            }
+            html += tags.map(t =>
+                `<span class="tag-filter-item" data-tag="${t}" onclick="toggleTagFilter('${t.replace(/'/g, "\\'")}')">${t} <span class="tag-count">(${tagCounts[t]})</span></span>`
+            ).join('');
+            filterList.innerHTML = html;
         }
 
         function toggleTranslation() {
@@ -477,9 +486,14 @@
             });
 
             // 过滤并渲染
-            const filtered = activeTag
-                ? allSentences.filter(s => (s.tags || []).includes(activeTag))
-                : allSentences;
+            let filtered;
+            if (!activeTag) {
+                filtered = allSentences;
+            } else if (activeTag === '__no_tag__') {
+                filtered = allSentences.filter(s => (s.tags || []).length === 0);
+            } else {
+                filtered = allSentences.filter(s => (s.tags || []).includes(activeTag));
+            }
             renderSentences(filtered);
             document.getElementById('sentenceCount').textContent =
                 activeTag ? `（${filtered.length} / ${allSentences.length} 个句子）` : `（共 ${allSentences.length} 个句子）`;
