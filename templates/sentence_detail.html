@@ -1481,8 +1481,25 @@
         }
 
         function closeLightbox(event) {
-            if (event && event.target !== event.currentTarget) return;
+            // 如果是键盘事件或关闭按钮，直接关闭
+            if (!event || event.type === 'keydown' || event.target.classList.contains('lightbox-close')) {
+                const lightbox = document.getElementById('lightbox');
+                lightbox.classList.remove('active');
+                document.body.style.overflow = '';
+                currentLightboxIndex = -1;
+                return;
+            }
 
+            // 点击图片或导航按钮时不关闭
+            if (event.target.classList.contains('lightbox-image') ||
+                event.target.classList.contains('lightbox-nav') ||
+                event.target.classList.contains('lightbox-note') ||
+                event.target.classList.contains('lightbox-note-input') ||
+                event.target.closest('.lightbox-footer')) {
+                return;
+            }
+
+            // 点击其他区域关闭
             const lightbox = document.getElementById('lightbox');
             lightbox.classList.remove('active');
             document.body.style.overflow = '';
