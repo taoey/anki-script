@@ -57,15 +57,6 @@
             color: #667eea;
         }
 
-        .stats {
-            background: rgba(255,255,255,0.2);
-            padding: 15px 25px;
-            border-radius: 8px;
-            color: white;
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
         .sentence-list {
             background: white;
             border-radius: 12px;
@@ -340,10 +331,6 @@
                 border-radius: 6px;
                 white-space: nowrap;
             }
-            .stats {
-                padding: 10px 15px;
-                font-size: 0.95rem;
-            }
             .sentence-item {
                 padding: 15px;
             }
@@ -366,8 +353,6 @@
             </div>
         </div>
 
-        <div id="stats" class="stats" style="display:none;"></div>
-
         <div id="controlsBar" class="controls-bar" style="display:none;">
             <div class="toggle-wrap" id="translationToggle" onclick="toggleTranslation()">
                 <div class="toggle-switch"></div>
@@ -375,8 +360,8 @@
             </div>
         </div>
 
-        <div id="tagFilterBar" class="tag-filter-bar">
-            <div class="tag-filter-label">🏷️ 按标签筛选</div>
+        <div id="tagFilterBar" class="tag-filter-bar" style="display:none;">
+            <div class="tag-filter-label">🏷️ 按标签筛选 <span id="sentenceCount"></span></div>
             <div id="tagFilterList" class="tag-filter-list"></div>
         </div>
 
@@ -441,6 +426,8 @@
                     buildTagFilter(allSentences);
                     renderSentences(allSentences);
                     document.getElementById('controlsBar').style.display = 'flex';
+                    document.getElementById('tagFilterBar').style.display = 'block';
+                    document.getElementById('sentenceCount').textContent = `（共 ${allSentences.length} 个句子）`;
                 } else {
                     document.getElementById('empty').style.display = 'block';
                 }
@@ -462,10 +449,11 @@
 
             const filterBar = document.getElementById('tagFilterBar');
             const filterList = document.getElementById('tagFilterList');
-            filterList.innerHTML = tags.map(t =>
-                `<span class="tag-filter-item" data-tag="${t}" onclick="toggleTagFilter('${t.replace(/'/g, "\\'")}')">${t} <span class="tag-count">(${tagCounts[t]})</span></span>`
-            ).join('');
-            filterBar.style.display = 'block';
+            filterList.innerHTML = tags.length > 0
+                ? tags.map(t =>
+                    `<span class="tag-filter-item" data-tag="${t}" onclick="toggleTagFilter('${t.replace(/'/g, "\\'")}')">${t} <span class="tag-count">(${tagCounts[t]})</span></span>`
+                ).join('')
+                : '<span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">暂无标签</span>';
         }
 
         function toggleTranslation() {
@@ -493,14 +481,11 @@
                 ? allSentences.filter(s => (s.tags || []).includes(activeTag))
                 : allSentences;
             renderSentences(filtered);
+            document.getElementById('sentenceCount').textContent =
+                activeTag ? `（${filtered.length} / ${allSentences.length} 个句子）` : `（共 ${allSentences.length} 个句子）`;
         }
 
         function renderSentences(sentences) {
-            // 显示统计
-            const statsDiv = document.getElementById('stats');
-            statsDiv.textContent = `共收录 ${sentences.length} 个句子`;
-            statsDiv.style.display = 'block';
-
             // 渲染列表
             const listDiv = document.getElementById('sentenceList');
             listDiv.innerHTML = sentences.map(s => {
