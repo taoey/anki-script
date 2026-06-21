@@ -784,6 +784,13 @@
             max-height: 100%;
             object-fit: contain;
             border-radius: 4px;
+            transform: scale(2);
+            transition: transform 0.3s ease;
+            cursor: grab;
+        }
+
+        .lightbox-image:active {
+            cursor: grabbing;
         }
 
         .lightbox-nav {
@@ -1524,6 +1531,9 @@
             const prevBtn = document.querySelector('.lightbox-prev');
             const nextBtn = document.querySelector('.lightbox-next');
 
+            // 重置图片变换状态
+            resetImageTransform();
+
             lightboxImage.src = `/api/sentence/${encodeURIComponent(dirName)}/images/${img.filename}`;
 
             if (img.note) {
@@ -1605,6 +1615,85 @@
                 navigateLightbox(1, e);
             }
         });
+
+        // 图片拖拽功能
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        let currentScale = 2;
+
+        function initImageDrag() {
+            const image = document.getElementById('lightboxImage');
+            if (!image) return;
+
+            // 鼠标拖拽
+            image.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                image.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateImageTransform();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                const image = document.getElementById('lightboxImage');
+                if (image) image.style.cursor = 'grab';
+            });
+
+            // 触摸拖拽
+            image.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - translateX;
+                    startY = e.touches[0].clientY - translateY;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging || e.touches.length !== 1) return;
+                translateX = e.touches[0].clientX - startX;
+                translateY = e.touches[0].clientY - startY;
+                updateImageTransform();
+            }, { passive: true });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            // 滚轮缩放
+            const container = document.querySelector('.lightbox-image-container');
+            if (container) {
+                container.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                    currentScale = Math.max(0.5, Math.min(5, currentScale + delta));
+                    updateImageTransform();
+                }, { passive: false });
+            }
+        }
+
+        function updateImageTransform() {
+            const image = document.getElementById('lightboxImage');
+            if (!image) return;
+            image.style.transform = `scale(${currentScale}) translate(${translateX / currentScale}px, ${translateY / currentScale}px)`;
+        }
+
+        function resetImageTransform() {
+            translateX = 0;
+            translateY = 0;
+            currentScale = 2;
+            updateImageTransform();
+        }
+
+        // 初始化拖拽
+        initImageDrag();
     </script>
 </body>
 </html>
