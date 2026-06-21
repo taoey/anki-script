@@ -935,11 +935,11 @@
 <body>
     <!-- 左右切换箭头 -->
     <div class="arrow-nav arrow-left" id="arrowLeft">
-        <a href="#" class="arrow-btn disabled" id="prevBtn">←</a>
+        <button class="arrow-btn disabled" id="prevBtn">←</button>
         <span class="arrow-label" id="prevLabel"></span>
     </div>
     <div class="arrow-nav arrow-right" id="arrowRight">
-        <a href="#" class="arrow-btn disabled" id="nextBtn">→</a>
+        <button class="arrow-btn disabled" id="nextBtn">→</button>
         <span class="arrow-label" id="nextLabel"></span>
     </div>
 
@@ -983,14 +983,12 @@
     </div>
 
     <script>
-        const dirName = "{{ dir_name }}";
+        let dirName = "{{ dir_name }}";
         let sentencesList = [];
         let currentIndex = -1;
 
         // 设置精读链接
         document.getElementById('reviewLink').href = `/review/${dirName}`;
-
-        document.getElementById('title').textContent = `句子详情`;
 
         // 单词高亮相关
         let existingWords = new Set();
@@ -1050,31 +1048,60 @@
             const prevLabel = document.getElementById('prevLabel');
             const nextLabel = document.getElementById('nextLabel');
 
-            if (currentIndex > 0) {
+            if (currentIndex > 0 && sentencesList.length > 0) {
+                const prevSentence = sentencesList[currentIndex - 1];
                 prevBtn.classList.remove('disabled');
-                prevBtn.href = `/sentence/${sentencesList[currentIndex - 1].dir_name}`;
-                prevLabel.textContent = sentencesList[currentIndex - 1].original.substring(0, 30) + '...';
+                prevBtn.onclick = () => navigateTo(prevSentence.dir_name);
+                prevBtn.setAttribute('aria-label', `上一个: ${prevSentence.original}`);
+                prevLabel.textContent = prevSentence.original.substring(0, 30) + '...';
             } else {
                 prevBtn.classList.add('disabled');
+                prevBtn.onclick = null;
+                prevBtn.removeAttribute('aria-label');
                 prevLabel.textContent = '';
             }
 
-            if (currentIndex < sentencesList.length - 1) {
+            if (currentIndex >= 0 && currentIndex < sentencesList.length - 1) {
+                const nextSentence = sentencesList[currentIndex + 1];
                 nextBtn.classList.remove('disabled');
-                nextBtn.href = `/sentence/${sentencesList[currentIndex + 1].dir_name}`;
-                nextLabel.textContent = sentencesList[currentIndex + 1].original.substring(0, 30) + '...';
+                nextBtn.onclick = () => navigateTo(nextSentence.dir_name);
+                nextBtn.setAttribute('aria-label', `下一个: ${nextSentence.original}`);
+                nextLabel.textContent = nextSentence.original.substring(0, 30) + '...';
             } else {
                 nextBtn.classList.add('disabled');
+                nextBtn.onclick = null;
+                nextBtn.removeAttribute('aria-label');
                 nextLabel.textContent = '';
             }
         }
 
         // 键盘快捷键
         document.addEventListener('keydown', (e) => {
+            // lightbox 打开时不触发句子切换
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox && lightbox.classList.contains('active')) return;
+
             if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                window.location.href = `/sentence/${sentencesList[currentIndex - 1].dir_name}`;
+                e.preventDefault();
+                navigateTo(sentencesList[currentIndex - 1].dir_name);
             } else if (e.key === 'ArrowRight' && currentIndex < sentencesList.length - 1) {
-                window.location.href = `/sentence/${sentencesList[currentIndex + 1].dir_name}`;
+                e.preventDefault();
+                navigateTo(sentencesList[currentIndex + 1].dir_name);
+            }
+        });
+
+        // 浏览器前进/后退
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.dirName) {
+                navigateTo(event.state.dirName, false);
+            } else {
+                const match = window.location.pathname.match(/^\/sentence\/(.+)$/);
+                if (match) {
+                    const dirNameFromUrl = decodeURIComponent(match[1]);
+                    if (dirNameFromUrl !== dirName) {
+                        navigateTo(dirNameFromUrl, false);
+                    }
+                }
             }
         });
 
@@ -1085,6 +1112,10 @@
 
                 if (data.status === 'ok') {
                     renderSentence(data.data);
+                    document.getElementById('title').textContent = `句子详情`;
+                    document.getElementById('reviewLink').href = `/review/${dirName}`;
+                    // 设置初始 history state，使 popstate 可正确回退到此页
+                    history.replaceState({ dirName: dirName }, '', `/sentence/${encodeURIComponent(dirName)}`);
                     return data.data;
                 } else {
                     showError(data.message || '查询失败');
@@ -1093,6 +1124,78 @@
             } catch (err) {
                 showError('网络错误，请重试');
                 return null;
+            }
+        }
+
+        // 客户端导航（句子切换，无需全页面刷新）
+        let isNavigating = false;
+
+        async function navigateTo(newDirName, pushState = true) {
+            // 防重入 + 边界检查
+            if (isNavigating) return;
+            if (!newDirName || newDirName === dirName) return;
+
+            isNavigating = true;
+
+            // 关闭 lightbox
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+
+            // 停止当前音频
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            if (currentPlayingBtn) {
+                currentPlayingBtn.textContent = '▶';
+                currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = null;
+            }
+
+            // 重置 header 播放按钮状态
+            const headerPlayBtn = document.getElementById('headerPlayBtn');
+            if (headerPlayBtn) {
+                headerPlayBtn.textContent = '▶';
+                headerPlayBtn.classList.remove('playing');
+            }
+
+            try {
+                const response = await fetch(`/api/sentence/${encodeURIComponent(newDirName)}`);
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    // 更新全局 dirName（图片/音频/lighbox 等功能依赖此变量）
+                    dirName = newDirName;
+
+                    // 重建内容区
+                    renderSentence(data.data);
+
+                    // 更新 UI 状态
+                    document.getElementById('title').textContent = '句子详情';
+                    document.getElementById('reviewLink').href = `/review/${newDirName}`;
+
+                    // 更新导航索引与箭头
+                    if (sentencesList.length > 0) {
+                        currentIndex = sentencesList.findIndex(s => s.dir_name === newDirName);
+                    } else {
+                        currentIndex = -1;
+                    }
+                    updateArrowButtons();
+
+                    // 更新浏览器 URL
+                    const url = `/sentence/${encodeURIComponent(newDirName)}`;
+                    if (pushState) {
+                        history.pushState({ dirName: newDirName }, '', url);
+                    }
+                } else {
+                    showError(data.message || '查询失败');
+                }
+            } catch (err) {
+                showError('网络错误，请重试');
+            } finally {
+                isNavigating = false;
             }
         }
 
@@ -1294,8 +1397,17 @@
                 });
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    // 跳转到句子列表页
-                    window.location.href = '/sentences';
+                    // 从本地列表中移除已删除的句子
+                    sentencesList.splice(currentIndex, 1);
+
+                    if (sentencesList.length === 0) {
+                        window.location.href = '/sentences';
+                        return;
+                    }
+
+                    // 优先跳转到上一个，否则跳转到下一个
+                    const newIndex = Math.min(currentIndex, sentencesList.length - 1);
+                    navigateTo(sentencesList[newIndex].dir_name);
                 } else {
                     alert('删除失败: ' + (data.message || '未知错误'));
                 }
