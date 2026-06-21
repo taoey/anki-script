@@ -193,6 +193,10 @@
             padding: 15px 0;
         }
 
+        .freq-td {
+            padding: 0 !important;
+        }
+
         .phrase-table .phrase {
             font-weight: 600;
             color: #667eea;
@@ -203,14 +207,15 @@
             color: #666;
         }
 
-        .phrase-frequency {
-            display: inline-block;
-            padding: 0 10px;
-            border-radius: 10px;
-            font-size: 0.75rem;
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 1px 10px;
+            background: #e8e5ff;
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 0.85rem;
             font-weight: 500;
-            line-height: 1.6;
-            vertical-align: middle;
         }
 
         .freq-high {
@@ -742,7 +747,7 @@
                         <table class="phrase-table">
                             ${sortedPhrases.map(p => `
                                 <tr>
-                                    ${p.frequency ? `<td class="phrase-frequency freq-${p.frequency}">${p.frequency === 'high' ? '高频' : p.frequency === 'medium' ? '中频' : '低频'}</td>` : '<td class="phrase-frequency"></td>'}
+                                    ${p.frequency ? `<td class="freq-td"><span class="tag freq-${p.frequency}">${p.frequency === 'high' ? '高频' : p.frequency === 'medium' ? '中频' : '低频'}</span></td>` : '<td class="freq-td"></td>'}
                                     <td class="phrase">${p.phrase}</td>
                                     <td class="phrase-meaning">${p.meaning}</td>
                                 </tr>
