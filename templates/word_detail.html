@@ -1076,11 +1076,11 @@
 <body>
     <!-- 左右切换箭头 -->
     <div class="arrow-nav arrow-left" id="arrowLeft">
-        <a href="#" class="arrow-btn disabled" id="prevBtn">←</a>
+        <button class="arrow-btn disabled" id="prevBtn">←</button>
         <span class="arrow-label" id="prevLabel"></span>
     </div>
     <div class="arrow-nav arrow-right" id="arrowRight">
-        <a href="#" class="arrow-btn disabled" id="nextBtn">→</a>
+        <button class="arrow-btn disabled" id="nextBtn">→</button>
         <span class="arrow-label" id="nextLabel"></span>
     </div>
 
@@ -1122,11 +1122,9 @@
     </div>
 
     <script>
-        const word = "{{ word }}";
+        let word = "{{ word }}";
         let wordsList = [];
         let currentIndex = -1;
-
-        document.getElementById('title').textContent = `${word} - 单词详情`;
 
         // 单词高亮相关
         let existingWords = new Set();
@@ -1186,31 +1184,58 @@
             const prevLabel = document.getElementById('prevLabel');
             const nextLabel = document.getElementById('nextLabel');
 
-            if (currentIndex > 0) {
+            if (currentIndex > 0 && wordsList.length > 0) {
                 prevBtn.classList.remove('disabled');
-                prevBtn.href = `/word/${wordsList[currentIndex - 1]}`;
+                prevBtn.onclick = () => navigateTo(wordsList[currentIndex - 1]);
+                prevBtn.setAttribute('aria-label', `上一个: ${wordsList[currentIndex - 1]}`);
                 prevLabel.textContent = wordsList[currentIndex - 1];
             } else {
                 prevBtn.classList.add('disabled');
+                prevBtn.onclick = null;
+                prevBtn.removeAttribute('aria-label');
                 prevLabel.textContent = '';
             }
 
-            if (currentIndex < wordsList.length - 1) {
+            if (currentIndex >= 0 && currentIndex < wordsList.length - 1) {
                 nextBtn.classList.remove('disabled');
-                nextBtn.href = `/word/${wordsList[currentIndex + 1]}`;
+                nextBtn.onclick = () => navigateTo(wordsList[currentIndex + 1]);
+                nextBtn.setAttribute('aria-label', `下一个: ${wordsList[currentIndex + 1]}`);
                 nextLabel.textContent = wordsList[currentIndex + 1];
             } else {
                 nextBtn.classList.add('disabled');
+                nextBtn.onclick = null;
+                nextBtn.removeAttribute('aria-label');
                 nextLabel.textContent = '';
             }
         }
 
         // 键盘快捷键
         document.addEventListener('keydown', (e) => {
+            // lightbox 打开时不触发单词切换
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox && lightbox.classList.contains('active')) return;
+
             if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                window.location.href = `/word/${wordsList[currentIndex - 1]}`;
+                e.preventDefault();
+                navigateTo(wordsList[currentIndex - 1]);
             } else if (e.key === 'ArrowRight' && currentIndex < wordsList.length - 1) {
-                window.location.href = `/word/${wordsList[currentIndex + 1]}`;
+                e.preventDefault();
+                navigateTo(wordsList[currentIndex + 1]);
+            }
+        });
+
+        // 浏览器前进/后退
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.word) {
+                navigateTo(event.state.word, false);
+            } else {
+                const match = window.location.pathname.match(/^\/word\/(.+)$/);
+                if (match) {
+                    const wordFromUrl = decodeURIComponent(match[1]);
+                    if (wordFromUrl !== word) {
+                        navigateTo(wordFromUrl, false);
+                    }
+                }
             }
         });
 
@@ -1227,11 +1252,83 @@
                 if (data.status === 'ok') {
                     renderWord(data.data);
                     document.getElementById('deleteBtn').style.display = 'inline-block';
+                    document.getElementById('title').textContent = `${word} - 单词详情`;
+                    // 设置初始 history state，使 popstate 可正确回退到此页
+                    history.replaceState({ word: word }, '', `/word/${encodeURIComponent(word)}`);
                 } else {
                     showError(data.message || '查询失败');
                 }
             } catch (err) {
                 showError('网络错误，请重试');
+            }
+        }
+
+        // 客户端导航（单词切换，无需全页面刷新）
+        let isNavigating = false;
+
+        async function navigateTo(newWord, pushState = true) {
+            // 防重入 + 边界检查
+            if (isNavigating) return;
+            if (!newWord || newWord === word) return;
+
+            isNavigating = true;
+
+            // 关闭 lightbox
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+
+            // 停止当前音频
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            if (currentPlayingBtn) {
+                currentPlayingBtn.textContent = '▶';
+                currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = null;
+            }
+
+            try {
+                const response = await fetch('/api/word', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word: newWord })
+                });
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    // 更新全局 word（图片/音频/lighbox 等功能依赖此变量）
+                    word = newWord;
+
+                    // 重建内容区（覆盖层显示、详情隐藏 — 与初始加载一致）
+                    renderWord(data.data);
+
+                    // 更新 UI 状态
+                    document.getElementById('title').textContent = `${newWord} - 单词详情`;
+                    document.getElementById('deleteBtn').style.display = 'inline-block';
+
+                    // 更新导航索引与箭头
+                    if (wordsList.length > 0) {
+                        currentIndex = wordsList.indexOf(newWord);
+                    } else {
+                        currentIndex = -1;
+                    }
+                    updateArrowButtons();
+
+                    // 更新浏览器 URL
+                    const url = `/word/${encodeURIComponent(newWord)}`;
+                    if (pushState) {
+                        history.pushState({ word: newWord }, '', url);
+                    }
+                } else {
+                    showError(data.message || '查询失败');
+                }
+            } catch (err) {
+                showError('网络错误，请重试');
+            } finally {
+                isNavigating = false;
             }
         }
 
@@ -1870,14 +1967,19 @@
                 });
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    // 跳转到单词列表页，如果没有上一个/下一个则回列表
-                    if (currentIndex > 0 && wordsList.length > 1) {
-                        window.location.href = `/word/${wordsList[currentIndex - 1]}`;
-                    } else if (currentIndex < wordsList.length - 1) {
-                        window.location.href = `/word/${wordsList[currentIndex + 1]}`;
-                    } else {
+                    // 从本地列表中移除已删除的单词
+                    wordsList.splice(currentIndex, 1);
+
+                    if (wordsList.length === 0) {
                         window.location.href = '/words';
+                        return;
                     }
+
+                    // 优先跳转到上一个，否则跳转到下一个
+                    const newIndex = Math.min(currentIndex, wordsList.length - 1);
+                    // 更新 currentIndex 供 navigateTo 内部使用
+                    // navigateTo 会重新设置 currentIndex，这里只是提前让 Arrow 判断正确
+                    navigateTo(wordsList[newIndex]);
                 } else {
                     alert('删除失败: ' + (data.message || '未知错误'));
                 }
