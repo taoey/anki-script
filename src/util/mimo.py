@@ -238,8 +238,8 @@ EXAMPLE for word "hello":
     }
   ],
   "phrases": [
-    {"phrase": "say hello", "meaning": "打招呼"},
-    {"phrase": "hello there", "meaning": "你好啊"}
+    {"phrase": "say hello", "meaning": "打招呼", "frequency": "high"},
+    {"phrase": "hello there", "meaning": "你好啊", "frequency": "medium"}
   ],
   "examples": [
     {
@@ -272,7 +272,8 @@ RULES:
 4. Examples preferably from movies/TV shows with source name and year
 5. Use IPA format for phonetic transcription
 6. Include mnemonic object with: etymology (词根词缀/词源), association (谐音/联想记忆), tips (记忆技巧)
-7. Mnemonic should be concise and helpful for Chinese learners, in Chinese"""
+7. Mnemonic should be concise and helpful for Chinese learners, in Chinese
+8. Phrases MUST be sorted by usage frequency (high to low), each phrase must include frequency field: "high", "medium", or "low""""
 
 
 def explain_word(word, max_retries=3):
