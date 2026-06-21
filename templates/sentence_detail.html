@@ -50,12 +50,17 @@
             border-radius: 8px;
             text-decoration: none;
             transition: all 0.3s;
+            white-space: nowrap;
         }
 
         .nav-btn:hover {
             background: white;
             color: #667eea;
         }
+
+        /* 移动端缩短文字 */
+        .nav-btn .long-text { display: inline; }
+        .nav-btn .short-text { display: none; }
 
         .content {
             background: white;
@@ -446,16 +451,20 @@
                 min-width: 0;
             }
             .nav-btn {
-                padding: 5px 8px;
+                padding: 5px 6px;
                 font-size: 0.75rem;
                 border-width: 1px;
                 border-radius: 6px;
                 white-space: nowrap;
             }
+            .nav-btn .long-text { display: none; }
+            .nav-btn .short-text { display: inline; }
             .delete-btn {
                 padding: 4px 8px;
                 font-size: 0.75rem;
             }
+            .delete-btn .long-text { display: none; }
+            .delete-btn .short-text { display: inline; }
             .header-play-btn {
                 width: 28px;
                 height: 28px;
@@ -557,11 +566,11 @@
         <div class="header">
             <button class="play-btn header-play-btn" id="headerPlayBtn" onclick="playAudio(dirName, this)" title="播放发音" style="display:none;">▶</button>
             <div class="nav-btns">
-                <a id="reviewLink" href="#" class="nav-btn">📖 精读</a>
-                <a href="/words" class="nav-btn">📖 单词列表</a>
-                <a href="/sentences" class="nav-btn">📝 句子列表</a>
-                <a href="/" class="nav-btn">🔍 查询</a>
-                <button class="delete-btn" id="deleteBtn" onclick="deleteSentence()" title="删除句子" style="display:none;">🗑️ 删除</button>
+                <a id="reviewLink" href="#" class="nav-btn"><span class="long-text">📖 精读</span><span class="short-text">📖精读</span></a>
+                <a href="/words" class="nav-btn"><span class="long-text">📖 单词列表</span><span class="short-text">单词</span></a>
+                <a href="/sentences" class="nav-btn"><span class="long-text">📝 句子列表</span><span class="short-text">句子</span></a>
+                <a href="/" class="nav-btn"><span class="long-text">🔍 查询</span><span class="short-text">🔍</span></a>
+                <button class="delete-btn" id="deleteBtn" onclick="deleteSentence()" title="删除句子" style="display:none;"><span class="long-text">🗑️ 删除</span><span class="short-text">🗑️</span></button>
             </div>
         </div>
 
