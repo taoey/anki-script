@@ -66,6 +66,8 @@
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .delete-btn:hover {
@@ -195,6 +197,7 @@
 
         .freq-td {
             padding: 0 !important;
+            width: 50px;
         }
 
         .phrase-table .phrase {
@@ -530,16 +533,44 @@
             .phonetic {
                 font-size: 1.1rem;
             }
-            .nav-btns {
-                gap: 6px;
+            .header {
                 flex-wrap: nowrap;
             }
+            .nav-btns {
+                gap: 4px;
+                flex-wrap: nowrap;
+                min-width: 0;
+            }
             .nav-btn {
-                padding: 6px 10px;
-                font-size: 0.8rem;
+                padding: 5px 8px;
+                font-size: 0.75rem;
                 border-width: 1px;
                 border-radius: 6px;
                 white-space: nowrap;
+            }
+            .delete-btn {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+            }
+            .phrase-table {
+                table-layout: fixed;
+                width: 100%;
+            }
+            .phrase-table .phrase {
+                width: 150px;
+                min-width: 0;
+                word-break: break-word;
+            }
+            .phrase-table .phrase-meaning {
+                word-break: break-word;
+            }
+            .example-header {
+                gap: 8px;
+            }
+            .sentence-play-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 0.7rem;
             }
             .arrow-nav {
                 position: fixed;
@@ -741,13 +772,14 @@
                     const fb = freqOrder[b.frequency] ?? 3;
                     return fa - fb;
                 });
+                const hasFreq = sortedPhrases.some(p => p.frequency);
                 html += `
                     <div class="section">
                         <div class="section-title">常用词组</div>
                         <table class="phrase-table">
                             ${sortedPhrases.map(p => `
                                 <tr>
-                                    ${p.frequency ? `<td class="freq-td"><span class="tag freq-${p.frequency}">${p.frequency === 'high' ? '高频' : p.frequency === 'medium' ? '中频' : '低频'}</span></td>` : '<td class="freq-td"></td>'}
+                                    ${hasFreq ? (p.frequency ? `<td class="freq-td"><span class="tag freq-${p.frequency}">${p.frequency === 'high' ? '高频' : p.frequency === 'medium' ? '中频' : '低频'}</span></td>` : '<td class="freq-td"></td>') : ''}
                                     <td class="phrase">${p.phrase}</td>
                                     <td class="phrase-meaning">${p.meaning}</td>
                                 </tr>

@@ -120,6 +120,7 @@
             width: 32px;
             height: 32px;
             font-size: 0.8rem;
+            flex-shrink: 0;
         }
 
         .header-play-btn:hover {
@@ -136,6 +137,8 @@
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .delete-btn:hover {
@@ -434,16 +437,36 @@
             h1 {
                 font-size: 1.3rem;
             }
-            .nav-btns {
-                gap: 6px;
+            .header {
                 flex-wrap: nowrap;
             }
+            .nav-btns {
+                gap: 4px;
+                flex-wrap: nowrap;
+                min-width: 0;
+            }
             .nav-btn {
-                padding: 6px 10px;
-                font-size: 0.8rem;
+                padding: 5px 8px;
+                font-size: 0.75rem;
                 border-width: 1px;
                 border-radius: 6px;
                 white-space: nowrap;
+            }
+            .delete-btn {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+            }
+            .header-play-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 0.7rem;
+            }
+            .created-time {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .key-word {
+                min-width: 100px;
             }
             .arrow-nav {
                 position: fixed;
