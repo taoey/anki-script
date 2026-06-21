@@ -773,6 +773,62 @@
             border-bottom: 1px solid #f0f0f0;
         }
 
+        /* 显示详情遮挡层 */
+        .detail-overlay {
+            margin: 25px 0 15px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            border: 2px dashed #c5cdd8;
+            border-radius: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+        }
+
+        .detail-overlay:hover {
+            background: linear-gradient(135deg, #eef1f6 0%, #dce2ec 100%);
+            border-color: #a8b5c8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .detail-overlay:active {
+            transform: translateY(0);
+        }
+
+        .detail-overlay .overlay-icon {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .detail-overlay .overlay-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .detail-overlay .overlay-hint {
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        .detail-content {
+            display: none;
+            animation: fadeInUp 0.35s ease;
+        }
+
+        .detail-content.show {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .image-grid-inline {
             display: flex;
             flex-direction: column;
@@ -1187,6 +1243,18 @@
                 </div>
             `;
 
+            // 显示详情遮挡层
+            html += `
+                <div id="detailOverlay" class="detail-overlay" onclick="showDetail()">
+                    <span class="overlay-icon">👁️</span>
+                    <div class="overlay-text">显示详情</div>
+                    <div class="overlay-hint">点击查看释义、词组、例句</div>
+                </div>
+            `;
+
+            // 详情内容（默认隐藏）
+            html += `<div id="detailContent" class="detail-content">`;
+
             // 释义
             if (data.definitions && data.definitions.length > 0) {
                 html += `
@@ -1296,6 +1364,9 @@
                 `;
             }
 
+            // 关闭详情内容容器
+            html += `</div>`;
+
             document.getElementById('content').innerHTML = html;
             document.getElementById('content').style.display = 'block';
         }
@@ -1304,6 +1375,14 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+
+        // 显示详情
+        function showDetail() {
+            const overlay = document.getElementById('detailOverlay');
+            const content = document.getElementById('detailContent');
+            if (overlay) overlay.style.display = 'none';
+            if (content) content.classList.add('show');
         }
 
         // 播放音频
