@@ -118,7 +118,6 @@ SENTENCE_PROMPT = """You are an English translation expert. For the given Englis
 
 EXAMPLE:
 {
-  "original": "Life is like a box of chocolates, you never know what you're gonna get.",
   "translation": "人生就像一盒巧克力，你永远不知道下一颗是什么味道。",
   "key_words": [
     {"word": "chocolates", "meaning": "巧克力"},
@@ -128,7 +127,7 @@ EXAMPLE:
 
 RULES:
 1. Response MUST be valid JSON only - no markdown, no explanation
-2. Provide accurate Chinese translation
+2. Provide accurate and COMPLETE Chinese translation for the ENTIRE text, do NOT skip or abbreviate any part
 3. Extract 3-5 key vocabulary words from the sentence
 4. Include Chinese meaning for each key word"""
 
@@ -151,6 +150,7 @@ def translate_sentence(sentence, max_retries=3):
             system_message=SENTENCE_PROMPT,
             user_message=f"Translate this sentence: {sentence}",
             temperature=0.1 + attempt * 0.1,
+            max_tokens=4096,
             response_format={"type": "json_object"}
         )
 
@@ -172,7 +172,8 @@ def translate_sentence(sentence, max_retries=3):
 
         try:
             result = json.loads(json_str)
-            if "original" in result and "translation" in result:
+            if "translation" in result:
+                result["original"] = sentence
                 return result
         except json.JSONDecodeError as e:
             print(f"⚠️ JSON 解析失败 (尝试 {attempt + 1}/{max_retries}): {e}")
