@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/icon.png" type="image/png">
+    <title>精读复习</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .back-btn, .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .back-btn:hover, .nav-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-left: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        /* 筛选栏 */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #e0e0e0;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .filter-chip:hover, .filter-chip.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-chip .count {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-left: 4px;
+        }
+
+        /* 开始按钮 */
+        .start-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 原文展示 */
+        .sentence-original {
+            font-size: 20px;
+            line-height: 1.8;
+            color: #222;
+            margin-bottom: 20px;
+        }
+
+        .sentence-original .word-link {
+            color: #e67e22;
+            text-decoration: none;
+            border-bottom: 1px dashed #e67e22;
+            cursor: pointer;
+        }
+
+        .sentence-original .word-link:hover {
+            color: #d35400;
+            border-bottom-style: solid;
+        }
+
+        /* 音频按钮 */
+        .audio-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .audio-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .audio-btn.playing {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 翻译 */
+        .translation {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #555;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* 重点词 */
+        .key-words-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .key-word-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .key-word-item[data-level="0"] {
+            border-color: #e74c3c;
+            background: #fdf0f0;
+        }
+
+        .key-word-item[data-level="1"] {
+            border-color: #f39c12;
+            background: #fef9f0;
+        }
+
+        .key-word-item[data-level="2"] {
+            border-color: #27ae60;
+            background: #f0fdf4;
+        }
+
+        .key-word-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .key-word-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .key-word-meaning {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .key-word-level {
+            margin-left: auto;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .key-word-item[data-level="0"] .key-word-level {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .key-word-item[data-level="1"] .key-word-level {
+            background: #f39c12;
+            color: white;
+        }
+
+        .key-word-item[data-level="2"] .key-word-level {
+            background: #27ae60;
+            color: white;
+        }
+
+        /* 回顾卡片 */
+        .review-word-card {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .review-word-card[data-level="0"] {
+            border-color: #e74c3c;
+            background: #fdf0f0;
+        }
+
+        .review-word-card[data-level="1"] {
+            border-color: #f39c12;
+            background: #fef9f0;
+        }
+
+        .review-word-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .review-word-en {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .review-word-cn {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .review-word-context {
+            font-size: 14px;
+            color: #888;
+            font-style: italic;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .review-word-context .highlight {
+            color: #e67e22;
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        .level-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .level-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .level-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .level-btn[data-level="0"] {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .level-btn[data-level="0"].active, .level-btn[data-level="0"]:hover {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .level-btn[data-level="1"] {
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+
+        .level-btn[data-level="1"].active, .level-btn[data-level="1"]:hover {
+            background: #f39c12;
+            color: white;
+        }
+
+        .level-btn[data-level="2"] {
+            color: #27ae60;
+            border-color: #27ae60;
+        }
+
+        .level-btn[data-level="2"].active, .level-btn[data-level="2"]:hover {
+            background: #27ae60;
+            color: white;
+        }
+
+        /* 底部操作栏 */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+        }
+
+        .action-btn.secondary {
+            background: #f0f0f0;
+            color: #555;
+        }
+
+        .action-btn.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* 进度指示 */
+        .progress-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            transition: background 0.3s;
+        }
+
+        .progress-dot.active {
+            background: #667eea;
+        }
+
+        .progress-dot.done {
+            background: #27ae60;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state .text {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* 步骤标题 */
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* 统计 */
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        /* 隐藏 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 移动端 */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .sentence-original {
+                font-size: 18px;
+            }
+
+            .key-word-item {
+                min-width: 100%;
+            }
+
+            .back-btn, .nav-btn {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📖 精读复习</h1>
+            <div class="nav-btns">
+                <a href="/sentences" class="nav-btn">句子列表</a>
+                <a href="/" class="back-btn">首页</a>
+            </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="card" style="text-align:center; padding:60px;">
+            <p style="color:#888; font-size:16px;">加载中...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div id="error" class="card hidden" style="text-align:center; padding:60px;">
+            <p style="color:#e74c3c; font-size:16px;" id="error-text"></p>
+        </div>
+
+        <!-- Step 0: 选择 -->
+        <div id="step-select" class="hidden">
+            <div class="card">
+                <div class="section-title">选择复习范围</div>
+                <div class="filter-bar" id="tag-filter"></div>
+                <div class="stats-row" id="queue-stats"></div>
+                <button class="start-btn" id="start-btn" onclick="startReview()">开始精读</button>
+            </div>
+        </div>
+
+        <!-- Step 1: 通读 -->
+        <div id="step-read" class="hidden">
+            <div class="progress-bar" id="progress-bar"></div>
+            <div class="card">
+                <div class="step-header">
+                    <span class="step-badge">1</span>
+                    <span class="step-title">通读原文</span>
+                </div>
+                <div class="sentence-original" id="read-original"></div>
+                <button class="audio-btn" id="read-audio-btn" onclick="playCurrentAudio()">🔊 播放音频</button>
+                <div class="action-bar">
+                    <button class="action-btn secondary" onclick="skipSentence()">跳过</button>
+                    <button class="action-btn primary" onclick="goToStep2()">开始精读 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: 标记 -->
+        <div id="step-mark" class="hidden">
+            <div class="progress-bar" id="progress-bar-2"></div>
+            <div class="card">
+                <div class="step-header">
+                    <span class="step-badge">2</span>
+                    <span class="step-title">标记掌握度</span>
+                </div>
+                <div class="sentence-original" id="mark-original"></div>
+                <div class="translation" id="mark-translation"></div>
+                <div class="section-title" style="margin-top:20px;">重点词汇</div>
+                <p style="font-size:13px; color:#888; margin-bottom:12px;">点击切换掌握度：不认识 → 模糊 → 认识</p>
+                <div class="key-words-grid" id="mark-words"></div>
+                <div class="action-bar">
+                    <button class="action-btn secondary" onclick="goToStep1()">← 返回</button>
+                    <button class="action-btn primary" onclick="goToStep3()">完成，查看回顾 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: 回顾 -->
+        <div id="step-review" class="hidden">
+            <div class="progress-bar" id="progress-bar-3"></div>
+            <div class="card">
+                <div class="step-header">
+                    <span class="step-badge">3</span>
+                    <span class="step-title">回顾薄弱词</span>
+                </div>
+                <div id="review-words"></div>
+                <div id="review-all-known" class="hidden" style="text-align:center; padding:30px;">
+                    <p style="font-size:48px; margin-bottom:10px;">🎉</p>
+                    <p style="font-size:18px; color:#27ae60; font-weight:600;">全部掌握！</p>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn secondary" onclick="goToStep2()">← 返回标记</button>
+                    <button class="action-btn primary" id="next-btn" onclick="nextSentence()">下一条 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 完成 -->
+        <div id="step-done" class="hidden">
+            <div class="card" style="text-align:center; padding:60px;">
+                <p style="font-size:48px; margin-bottom:16px;">📚</p>
+                <p style="font-size:20px; font-weight:600; color:#333; margin-bottom:8px;">本轮复习完成！</p>
+                <p style="font-size:16px; color:#888; margin-bottom:30px;" id="done-stats"></p>
+                <button class="start-btn" onclick="backToSelect()">继续复习</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 状态
+        let reviewQueue = [];
+        let currentIndex = 0;
+        let currentWords = [];  // 当前句子的词，带掌握度
+        let allTags = [];
+        let selectedTag = '';
+        let existingWords = new Set();
+        let longWordsSorted = [];
+        let currentAudio = null;
+
+        // 从 URL 获取 dir_name（如果有）
+        const urlParts = window.location.pathname.split('/');
+        const directDirName = urlParts.length > 2 ? urlParts[urlParts.length - 1] : '';
+
+        // 初始化
+        async function init() {
+            try {
+                await loadExistingWords();
+                if (directDirName) {
+                    await loadSingleSentence(directDirName);
+                } else {
+                    await loadQueue();
+                }
+                document.getElementById('loading').classList.add('hidden');
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        async function loadExistingWords() {
+            const res = await fetch('/api/words/exists');
+            const data = await res.json();
+            if (data.status === 'ok') {
+                existingWords = new Set(data.data);
+                longWordsSorted = data.data.filter(w => w.length > 3).sort((a, b) => b.length - a.length);
+            }
+        }
+
+        async function loadQueue() {
+            const params = selectedTag ? `?tag=${encodeURIComponent(selectedTag)}` : '';
+            const res = await fetch(`/api/review/queue${params}`);
+            const data = await res.json();
+            if (data.status !== 'ok') throw new Error(data.message);
+
+            reviewQueue = data.data;
+            buildTagFilter();
+            renderSelectStep();
+        }
+
+        async function loadSingleSentence(dirName) {
+            const res = await fetch(`/api/review/queue?dir_name=${encodeURIComponent(dirName)}`);
+            const data = await res.json();
+            if (data.status !== 'ok') throw new Error(data.message);
+            if (data.data.length === 0) throw new Error('句子不存在');
+
+            reviewQueue = data.data;
+            document.getElementById('step-select').classList.add('hidden');
+            currentIndex = 0;
+            loadCurrentSentence();
+            showStep('step-read');
+        }
+
+        function buildTagFilter() {
+            const tagCounts = {};
+            const noTagSentences = [];
+
+            // 需要从 API 获取所有句子的 tags
+            fetch('/api/sentences').then(r => r.json()).then(data => {
+                if (data.status !== 'ok') return;
+                const sentences = data.data;
+                sentences.forEach(s => {
+                    if (s.tags && s.tags.length > 0) {
+                        s.tags.forEach(t => {
+                            tagCounts[t] = (tagCounts[t] || 0) + 1;
+                        });
+                    }
+                });
+
+                const container = document.getElementById('tag-filter');
+                let html = `<span class="filter-chip ${selectedTag === '' ? 'active' : ''}" onclick="selectTag('')">全部</span>`;
+                for (const [tag, count] of Object.entries(tagCounts)) {
+                    html += `<span class="filter-chip ${selectedTag === tag ? 'active' : ''}" onclick="selectTag('${tag}')">${tag}<span class="count">${count}</span></span>`;
+                }
+                container.innerHTML = html;
+            });
+        }
+
+        function selectTag(tag) {
+            selectedTag = tag;
+            loadQueue();
+        }
+
+        function renderSelectStep() {
+            const step = document.getElementById('step-select');
+            step.classList.remove('hidden');
+
+            const stats = document.getElementById('queue-stats');
+            const total = reviewQueue.length;
+            const totalWords = reviewQueue.reduce((sum, s) => sum + s.total_words, 0);
+            const lowWords = reviewQueue.reduce((sum, s) => sum + s.low_mastery_count, 0);
+
+            stats.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-number">${total}</div>
+                    <div class="stat-label">篇文章</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${totalWords}</div>
+                    <div class="stat-label">个重点词</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${lowWords}</div>
+                    <div class="stat-label">待掌握</div>
+                </div>
+            `;
+
+            document.getElementById('start-btn').disabled = total === 0;
+        }
+
+        function startReview() {
+            if (reviewQueue.length === 0) return;
+            currentIndex = 0;
+            loadCurrentSentence();
+            showStep('step-read');
+        }
+
+        function loadCurrentSentence() {
+            const item = reviewQueue[currentIndex];
+            if (!item) return;
+
+            // 通读页
+            document.getElementById('read-original').innerHTML = highlightWords(item.original);
+
+            // 标记页
+            document.getElementById('mark-original').innerHTML = highlightWords(item.original);
+            document.getElementById('mark-translation').textContent = item.translation;
+
+            // 重点词
+            currentWords = item.key_words.map(kw => ({...kw}));
+            renderKeyWords();
+
+            // 进度条
+            renderProgress();
+
+            // 停止之前的音频
+            stopAudio();
+        }
+
+        function renderKeyWords() {
+            const container = document.getElementById('mark-words');
+            const levelLabels = ['不认识', '模糊', '认识'];
+            container.innerHTML = currentWords.map((kw, i) => `
+                <div class="key-word-item" data-level="${kw.mastery}" onclick="toggleWordLevel(${i})">
+                    <div>
+                        <div class="key-word-text">${kw.word}</div>
+                        <div class="key-word-meaning">${kw.meaning}</div>
+                    </div>
+                    <span class="key-word-level">${levelLabels[kw.mastery]}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleWordLevel(index) {
+            currentWords[index].mastery = (currentWords[index].mastery + 1) % 3;
+            renderKeyWords();
+        }
+
+        function renderProgress() {
+            const bars = ['progress-bar', 'progress-bar-2', 'progress-bar-3'];
+            bars.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = reviewQueue.map((_, i) => {
+                    let cls = 'progress-dot';
+                    if (i < currentIndex) cls += ' done';
+                    else if (i === currentIndex) cls += ' active';
+                    return `<div class="${cls}"></div>`;
+                }).join('');
+            });
+        }
+
+        // 步骤切换
+        function showStep(stepId) {
+            ['step-select', 'step-read', 'step-mark', 'step-review', 'step-done'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(stepId).classList.remove('hidden');
+        }
+
+        function goToStep1() {
+            showStep('step-read');
+        }
+
+        function goToStep2() {
+            showStep('step-mark');
+        }
+
+        function goToStep3() {
+            // 渲染回顾页：只显示不认识和模糊的词
+            const weakWords = currentWords.filter(kw => kw.mastery < 2);
+            const container = document.getElementById('review-words');
+            const allKnown = document.getElementById('review-all-known');
+            const item = reviewQueue[currentIndex];
+
+            if (weakWords.length === 0) {
+                container.classList.add('hidden');
+                allKnown.classList.remove('hidden');
+            } else {
+                container.classList.remove('hidden');
+                allKnown.classList.add('hidden');
+
+                container.innerHTML = weakWords.map((kw, i) => {
+                    const originalIdx = currentWords.indexOf(kw);
+                    // 高亮词在原文中的上下文
+                    const contextHtml = highlightWordInContext(item.original, kw.word);
+
+                    return `
+                        <div class="review-word-card" data-level="${kw.mastery}">
+                            <div class="review-word-header">
+                                <span class="review-word-en">${kw.word}</span>
+                            </div>
+                            <div class="review-word-cn">${kw.meaning}</div>
+                            <div class="review-word-context">${contextHtml}</div>
+                            <div class="level-btns">
+                                <button class="level-btn ${kw.mastery === 0 ? 'active' : ''}" data-level="0" onclick="setReviewLevel(${originalIdx}, 0)">不认识</button>
+                                <button class="level-btn ${kw.mastery === 1 ? 'active' : ''}" data-level="1" onclick="setReviewLevel(${originalIdx}, 1)">模糊</button>
+                                <button class="level-btn ${kw.mastery === 2 ? 'active' : ''}" data-level="2" onclick="setReviewLevel(${originalIdx}, 2)">认识</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            showStep('step-review');
+        }
+
+        function setReviewLevel(wordIndex, level) {
+            currentWords[wordIndex].mastery = level;
+            goToStep3(); // 重新渲染
+        }
+
+        function highlightWordInContext(text, targetWord) {
+            const regex = new RegExp(`(\\b${targetWord}\\b)`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // 提交并下一条
+        async function nextSentence() {
+            const item = reviewQueue[currentIndex];
+
+            // 提交掌握度
+            const masteryUpdates = currentWords.map(kw => ({
+                word: kw.word,
+                level: kw.mastery
+            }));
+
+            try {
+                await fetch(`/api/sentence/${encodeURIComponent(item.dir_name)}/review`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mastery_updates: masteryUpdates})
+                });
+            } catch (e) {
+                console.error('保存掌握度失败:', e);
+            }
+
+            // 下一条
+            currentIndex++;
+            if (currentIndex >= reviewQueue.length) {
+                showDone();
+            } else {
+                loadCurrentSentence();
+                showStep('step-read');
+            }
+        }
+
+        function skipSentence() {
+            currentIndex++;
+            if (currentIndex >= reviewQueue.length) {
+                showDone();
+            } else {
+                loadCurrentSentence();
+                showStep('step-read');
+            }
+        }
+
+        function showDone() {
+            const totalWords = reviewQueue.reduce((sum, s) => sum + s.total_words, 0);
+            document.getElementById('done-stats').textContent = `共复习 ${reviewQueue.length} 篇，${totalWords} 个重点词`;
+            showStep('step-done');
+        }
+
+        function backToSelect() {
+            showStep('step-select');
+            loadQueue();
+        }
+
+        // 音频
+        function playCurrentAudio() {
+            const item = reviewQueue[currentIndex];
+            if (!item) return;
+            const btn = document.getElementById('read-audio-btn');
+
+            if (currentAudio) {
+                stopAudio();
+                return;
+            }
+
+            const audio = new Audio(`/api/audio/sentence/${encodeURIComponent(item.dir_name)}`);
+            currentAudio = audio;
+            btn.textContent = '⏸ 暂停';
+            btn.classList.add('playing');
+            audio.play();
+            audio.addEventListener('ended', () => {
+                btn.textContent = '🔊 播放音频';
+                btn.classList.remove('playing');
+                currentAudio = null;
+            });
+        }
+
+        function stopAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            const btn = document.getElementById('read-audio-btn');
+            if (btn) {
+                btn.textContent = '🔊 播放音频';
+                btn.classList.remove('playing');
+            }
+        }
+
+        // 高亮（复用现有模式）
+        function highlightWords(text) {
+            if (!existingWords.size) return text;
+            return text.replace(/\b([a-zA-Z]+)\b/g, (match, word) => {
+                const lower = word.toLowerCase();
+                if (existingWords.has(lower)) {
+                    return `<span class="word-link" onclick="event.stopPropagation(); window.location.href='/word/${lower}'">${match}</span>`;
+                }
+                for (const ew of longWordsSorted) {
+                    if (lower.includes(ew)) {
+                        return `<span class="word-link" onclick="event.stopPropagation(); window.location.href='/word/${ew}'">${match}</span>`;
+                    }
+                }
+                return match;
+            });
+        }
+
+        // 错误处理
+        function showError(msg) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-text').textContent = msg;
+        }
+
+        init();
+    </script>
+</body>
+</html>

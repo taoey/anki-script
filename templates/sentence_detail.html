@@ -557,6 +557,7 @@
         <div class="header">
             <button class="play-btn header-play-btn" id="headerPlayBtn" onclick="playAudio(dirName, this)" title="播放发音" style="display:none;">▶</button>
             <div class="nav-btns">
+                <a id="reviewLink" href="#" class="nav-btn">📖 精读</a>
                 <a href="/words" class="nav-btn">📖 单词列表</a>
                 <a href="/sentences" class="nav-btn">📝 句子列表</a>
                 <a href="/" class="nav-btn">🔍 查询</a>
@@ -575,6 +576,9 @@
         const dirName = "{{ dir_name }}";
         let sentencesList = [];
         let currentIndex = -1;
+
+        // 设置精读链接
+        document.getElementById('reviewLink').href = `/review/${dirName}`;
 
         document.getElementById('title').textContent = `句子详情`;
 

@@ -381,6 +381,20 @@ def sentence_detail_page(dir_name):
     return render_template("sentence_detail.html", dir_name=dir_name)
 
 
+@app.route("/review", methods=["GET"])
+@require_auth
+def review_page():
+    """精读复习页面"""
+    return render_template("review.html")
+
+
+@app.route("/review/<dir_name>", methods=["GET"])
+@require_auth
+def review_sentence_page(dir_name):
+    """直接进入某条句子的精读"""
+    return render_template("review.html", dir_name=dir_name)
+
+
 @app.route("/api/sentences", methods=["GET"])
 @require_auth
 def get_sentences_list():
@@ -679,6 +693,224 @@ def record_sentence_study(dir_name):
             json.dump(meta, f, ensure_ascii=False, indent=2)
 
         return jsonify({"status": "ok", "data": study})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/word/<word>/mastery", methods=["POST"])
+@require_auth
+def update_word_mastery(word):
+    """更新单词掌握度"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    word_path = os.path.join(words_dir, word.lower())
+    meta_path = os.path.join(word_path, "meta.json")
+
+    if not os.path.exists(os.path.join(word_path, "word.json")):
+        return jsonify({"status": "error", "message": "单词不存在"}), 404
+
+    try:
+        data = request.get_json()
+        if not data or "level" not in data:
+            return jsonify({"status": "error", "message": "缺少 level 参数"}), 400
+
+        level = data["level"]
+        if level not in (0, 1, 2):
+            return jsonify({"status": "error", "message": "level 必须为 0/1/2"}), 400
+
+        sentence_dir = data.get("sentence_dir", "")
+
+        # 读取现有 meta.json
+        meta = {}
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+        # 更新 mastery
+        mastery = meta.get("mastery", {"level": 0, "last_seen": 0, "seen_in": []})
+        mastery["level"] = level
+        mastery["last_seen"] = time.time()
+
+        if sentence_dir:
+            seen_in = mastery.get("seen_in", [])
+            if sentence_dir in seen_in:
+                seen_in.remove(sentence_dir)
+            seen_in.insert(0, sentence_dir)
+            mastery["seen_in"] = seen_in[:20]
+
+        meta["mastery"] = mastery
+
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "data": mastery})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _get_word_mastery(word):
+    """读取单词掌握度（内部函数）"""
+    words_dir = os.path.join(DATA_DIR, "words")
+    meta_path = os.path.join(words_dir, word.lower(), "meta.json")
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+                return meta.get("mastery", {"level": 0, "last_seen": 0, "seen_in": []})
+        except Exception:
+            pass
+    return {"level": 0, "last_seen": 0, "seen_in": []}
+
+
+@app.route("/api/review/queue", methods=["GET"])
+@require_auth
+def get_review_queue():
+    """获取精读复习队列"""
+    tag_filter = request.args.get("tag", "").strip()
+    dir_filter = request.args.get("dir_name", "").strip()
+    limit = int(request.args.get("limit", 10))
+
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    if not os.path.exists(sentences_dir):
+        return jsonify({"status": "ok", "data": []})
+
+    try:
+        items = []
+        for dir_name in os.listdir(sentences_dir):
+            sentence_path = os.path.join(sentences_dir, dir_name)
+            json_path = os.path.join(sentence_path, "sentence.json")
+            meta_path = os.path.join(sentence_path, "meta.json")
+
+            if not os.path.isdir(sentence_path) or not os.path.exists(json_path):
+                continue
+
+            # 按 dir_name 精确筛选
+            if dir_filter and dir_name != dir_filter:
+                continue
+
+            # 读取 meta 获取 tags
+            tags = []
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    meta = json.load(f)
+                    tags = meta.get("tags", [])
+
+            # 按标签筛选
+            if tag_filter and tag_filter not in tags:
+                continue
+
+            # 读取句子数据
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 获取每个 key_word 的掌握度
+            key_words = data.get("key_words", [])
+            words_with_mastery = []
+            low_count = 0
+            for kw in key_words:
+                word_text = kw.get("word", "")
+                mastery = _get_word_mastery(word_text)
+                words_with_mastery.append({
+                    "word": word_text,
+                    "meaning": kw.get("meaning", ""),
+                    "mastery": mastery["level"]
+                })
+                if mastery["level"] < 2:
+                    low_count += 1
+
+            items.append({
+                "dir_name": dir_name,
+                "original": data.get("original", ""),
+                "translation": data.get("translation", ""),
+                "tags": tags,
+                "key_words": words_with_mastery,
+                "low_mastery_count": low_count,
+                "total_words": len(key_words)
+            })
+
+        # 排序：未掌握词多的优先，其次随机
+        import random
+        random.shuffle(items)
+        items.sort(key=lambda x: x["low_mastery_count"], reverse=True)
+
+        return jsonify({"status": "ok", "data": items[:limit]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/sentence/<dir_name>/review", methods=["POST"])
+@require_auth
+def record_sentence_review(dir_name):
+    """记录一次精读复习，批量更新单词掌握度"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_path = os.path.join(sentences_dir, dir_name)
+
+    if not os.path.exists(sentence_path):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    try:
+        data = request.get_json()
+        updates = data.get("mastery_updates", [])
+
+        results = []
+        for item in updates:
+            word = item.get("word", "").strip().lower()
+            level = item.get("level", 0)
+            if not word or level not in (0, 1, 2):
+                continue
+
+            words_dir = os.path.join(DATA_DIR, "words")
+            word_path = os.path.join(words_dir, word)
+            word_json_path = os.path.join(word_path, "word.json")
+            meta_path = os.path.join(word_path, "meta.json")
+
+            # 只更新已收录的单词
+            if not os.path.exists(word_json_path):
+                continue
+
+            meta = {}
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    meta = json.load(f)
+
+            mastery = meta.get("mastery", {"level": 0, "last_seen": 0, "seen_in": []})
+            mastery["level"] = level
+            mastery["last_seen"] = time.time()
+            seen_in = mastery.get("seen_in", [])
+            if dir_name not in seen_in:
+                seen_in.insert(0, dir_name)
+                mastery["seen_in"] = seen_in[:20]
+
+            meta["mastery"] = mastery
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+
+            results.append({"word": word, "level": level})
+
+        # 同时记录句子的 study 数据
+        meta_path = os.path.join(sentence_path, "meta.json")
+        meta = {}
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+        study = meta.get("study", {"total_count": 0, "total_duration": 0, "records": []})
+        study["total_count"] = study.get("total_count", 0) + 1
+
+        now = time.time()
+        record = {
+            "at": now,
+            "at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+            "duration": 0
+        }
+        records = study.get("records", [])
+        records.insert(0, record)
+        study["records"] = records[:5]
+
+        meta["study"] = study
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "data": {"updated": results, "study": study}})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
