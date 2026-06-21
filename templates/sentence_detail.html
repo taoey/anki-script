@@ -191,12 +191,14 @@
         }
 
         .created-time {
-            margin-top: 30px;
-            padding-top: 20px;
+            margin-top: 10px;
+            padding: 10px 0;
             border-top: 1px solid #f0f0f0;
             font-size: 0.9rem;
             color: #999;
-            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .sentence-tags {
@@ -204,14 +206,13 @@
             flex-wrap: wrap;
             align-items: center;
             gap: 6px;
-            margin-top: 10px;
         }
 
         .tag {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 3px 12px;
+            padding: 1px 10px;
             background: #e8e5ff;
             color: #667eea;
             border-radius: 12px;
@@ -287,6 +288,45 @@
         .word-link:hover {
             color: #d35400;
             border-bottom-color: #d35400;
+        }
+
+        .study-summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .study-stat {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background: #f8f7ff;
+            border-radius: 8px;
+        }
+
+        .study-stat-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .study-stat-label {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .study-record {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .study-record:last-child {
+            border-bottom: none;
         }
 
         .loading {
@@ -583,14 +623,7 @@
                 `;
             }
 
-            // 添加时间
-            if (data.created_at_str) {
-                html += `
-                    <div class="created-time">📅 添加于 ${data.created_at_str}</div>
-                `;
-            }
-
-            // Tags
+            // Tags + 添加时间（同一行）
             const tags = data.tags || [];
             const tagsHtml = tags.map(t => `
                 <span class="tag">
@@ -599,11 +632,46 @@
                 </span>
             `).join('');
             html += `
-                <div class="sentence-tags">
-                    ${tagsHtml}
-                    <button class="tag-add-btn" onclick="showTagInput(this)" title="添加 tag">+</button>
+                <div class="created-time">
+                    <div class="sentence-tags">
+                        ${tagsHtml}
+                        <button class="tag-add-btn" onclick="showTagInput(this)" title="添加 tag">+</button>
+                    </div>
+                    <span>📅 添加于 ${data.created_at_str || ''}</span>
                 </div>
             `;
+
+            // 学习详情
+            const study = data.study || {};
+            const totalCount = study.total_count || 0;
+            const totalDuration = study.total_duration || 0;
+            const records = study.records || [];
+            if (totalCount > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">学习详情</div>
+                        <div class="study-summary">
+                            <div class="study-stat">
+                                <div class="study-stat-value">${totalCount}</div>
+                                <div class="study-stat-label">总学习次数</div>
+                            </div>
+                            <div class="study-stat">
+                                <div class="study-stat-value">${formatDuration(totalDuration)}</div>
+                                <div class="study-stat-label">总学习时长</div>
+                            </div>
+                        </div>
+                        ${records.length > 0 ? `
+                            <div style="font-size:0.85rem;color:#999;margin-bottom:8px;">最近学习记录</div>
+                            ${records.map(r => `
+                                <div class="study-record">
+                                    <span>📅 ${r.at_str}</span>
+                                    <span>⏱ ${formatDuration(r.duration)}</span>
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                    </div>
+                `;
+            }
 
             document.getElementById('content').innerHTML = html;
             document.getElementById('content').style.display = 'block';
@@ -719,6 +787,56 @@
                 btn.classList.remove('playing');
             });
         }
+
+        // 格式化秒数为可读时长
+        function formatDuration(seconds) {
+            if (seconds < 60) return `${seconds}秒`;
+            if (seconds < 3600) {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return s > 0 ? `${m}分${s}秒` : `${m}分钟`;
+            }
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
+        }
+
+        // 学习时长跟踪
+        let studyStartTime = Date.now();
+        let accumulatedMs = 0;
+        let isPageVisible = true;
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // 页面隐藏，累加当前段时长
+                accumulatedMs += Date.now() - studyStartTime;
+                isPageVisible = false;
+            } else {
+                // 页面恢复，重新开始计时
+                studyStartTime = Date.now();
+                isPageVisible = true;
+            }
+        });
+
+        function sendStudyRecord() {
+            let totalMs = accumulatedMs;
+            if (isPageVisible) {
+                totalMs += Date.now() - studyStartTime;
+            }
+            const duration = Math.round(totalMs / 1000);
+            if (duration < 1) return;
+
+            const url = `/api/sentence/${encodeURIComponent(dirName)}/study`;
+            const body = JSON.stringify({ duration });
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+                keepalive: true
+            }).catch(() => {});
+        }
+
+        window.addEventListener('beforeunload', sendStudyRecord);
 
         // 初始化
         loadSentence();

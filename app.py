@@ -483,6 +483,7 @@ def get_sentence_detail(dir_name):
                 data['created_at_str'] = meta.get('created_at_str', '')
                 data['type'] = 'sentence'
                 data['tags'] = meta.get('tags', [])
+                data['study'] = meta.get('study', {})
 
         return jsonify({"status": "ok", "data": data})
     except Exception as e:
@@ -549,6 +550,51 @@ def delete_sentence_tag(dir_name, tag):
             return jsonify({"status": "ok", "data": {"tags": tags}})
         else:
             return jsonify({"status": "ok", "data": {"tags": []}})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/sentence/<dir_name>/study", methods=["POST"])
+@require_auth
+def record_sentence_study(dir_name):
+    """记录句子学习时长"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_path = os.path.join(sentences_dir, dir_name)
+    meta_path = os.path.join(sentence_path, "meta.json")
+
+    if not os.path.exists(sentence_path):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    try:
+        duration = request.json.get("duration", 0)
+        if duration < 1:
+            return jsonify({"status": "error", "message": "学习时长太短"}), 400
+
+        # 读取现有 meta.json
+        meta = {}
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+        study = meta.get("study", {"total_count": 0, "total_duration": 0, "records": []})
+        study["total_count"] = study.get("total_count", 0) + 1
+        study["total_duration"] = study.get("total_duration", 0) + duration
+
+        now = time.time()
+        record = {
+            "at": now,
+            "at_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+            "duration": duration
+        }
+        records = study.get("records", [])
+        records.insert(0, record)
+        study["records"] = records[:5]  # 只保留最近5次
+
+        meta["study"] = study
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "data": study})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
