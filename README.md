@@ -11,6 +11,9 @@
 - **发音播放** — 单词使用 Google TTS，句子使用 MiMo TTS
 - **例句音频** — 自动生成并缓存例句发音
 - **单词/句子列表** — 分别管理已查询的单词和句子
+- **单词高亮链接** — 页面中已收录的单词自动高亮可点击，支持子串匹配（按首字母索引+长度降序匹配）
+- **句子标签** — 为句子添加/删除自定义标签
+- **学习记录** — 标记句子学习状态
 - **数据缓存** — 所有查询结果本地缓存，支持自定义存储路径
 - **密码认证** — HTTP Basic Auth 保护
 
@@ -90,10 +93,16 @@ anki-script/
 | GET | `/word/<word>` | 单词详情页面 |
 | GET | `/sentences` | 句子列表页面 |
 | GET | `/sentence/<dir>` | 句子详情页面 |
-| GET | `/api/word/<word>` | 查询单词/句子 |
+| GET | `/api/word/<word>` | 查询单词/句子（GET） |
+| POST | `/api/word` | 查询单词/句子（POST，推荐，避免 URL 长度限制） |
 | GET | `/api/words` | 单词列表 |
+| GET | `/api/words/exists` | 已收录单词列表（用于前端高亮） |
 | GET | `/api/sentences` | 句子列表 |
 | GET | `/api/sentence/<dir>` | 句子详情 |
+| DELETE | `/api/sentence/<dir>` | 删除句子 |
+| POST | `/api/sentence/<dir>/tag` | 添加句子标签 |
+| DELETE | `/api/sentence/<dir>/tag/<tag>` | 删除句子标签 |
+| POST | `/api/sentence/<dir>/study` | 标记句子学习状态 |
 | GET | `/api/audio/<word>` | 单词发音 |
 | GET | `/api/audio/<word>/sentence/<n>` | 例句发音 |
 | GET | `/api/audio/sentence/<dir>` | 句子发音 |

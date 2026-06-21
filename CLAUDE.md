@@ -34,6 +34,7 @@ pip install -r requirements.txt
 - Flask 服务，端口 8076，HTTP Basic Auth 认证
 - 单词/句子查询、音频播放、配置管理
 - 数据存储在 `data/words/` 和 `data/sentences/` 目录
+- 查询接口推荐用 POST `/api/word`，避免长句子导致 URL 超长 404
 
 ### 工具模块 (src/util/)
 - **audio.py** — Google TTS 音频下载，缓存为 `word-audit.mp3`
@@ -47,6 +48,15 @@ pip install -r requirements.txt
 ### Anki 脚本
 - **ankiconnect.py** — `AnkiConnect` 类，封装 AnkiConnect API
 - **create_vocab_cards.py** — 通过 `importlib.util` 动态加载 ankiconnect.py
+
+### 前端单词高亮 (word-link)
+- 5 个模板页面均包含 `highlightWords()` 函数，将已收录单词渲染为可点击链接
+- 匹配规则（优先级从高到低）：
+  1. 精确匹配 — `existingWords.has(word)`，O(1) Set 查找
+  2. 子串匹配 — 文本单词包含已收录单词，取最长命中
+- 子串匹配优化：页面加载时按首字母建索引（`wordsByFirstLetter`），长度 > 3 的单词按长度降序排列，匹配时首个命中即可返回
+- `/api/words/exists` 返回所有已收录单词列表，前端缓存为 Set
+- `words.html` 仅使用精确匹配（避免释义文本中大量误匹配）
 
 ## 关键设计决策
 
