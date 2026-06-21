@@ -505,12 +505,15 @@
 
         // 单词高亮相关
         let existingWords = new Set();
+        let longWordsSorted = []; // 长度>3的单词，按长度降序排列，用于子串匹配
         async function loadExistingWords() {
             try {
                 const res = await fetch('/api/words/exists');
                 const data = await res.json();
                 if (data.status === 'ok') {
                     existingWords = new Set(data.data);
+                    // 预处理：筛选长度>3的单词，按长度降序排列
+                    longWordsSorted = data.data.filter(w => w.length > 3).sort((a, b) => b.length - a.length);
                 }
             } catch (err) {
                 console.error('加载单词列表失败:', err);
@@ -526,8 +529,8 @@
                 if (existingWords.has(lower)) {
                     return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${lower}'">${match}</span>`;
                 }
-                // 包含匹配：单词中包含已收录的单词
-                for (const ew of existingWords) {
+                // 包含匹配：从最长的单词开始匹配，首个命中即为最佳
+                for (const ew of longWordsSorted) {
                     if (lower.includes(ew)) {
                         return `<span class="word-link" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/word/${ew}'">${match}</span>`;
                     }
