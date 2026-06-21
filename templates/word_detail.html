@@ -1243,23 +1243,24 @@
                 </div>
             `;
 
-            // 图片模块（紧跟单词之后）
+            // 图片模块（紧跟单词之后，直接渲染避免二次请求导致闪烁）
+            const images = data.images || [];
+            currentImages = images;
             html += `
-                <div id="imagesSectionInline" class="images-section-inline" style="display:none;">
+                <div id="imagesSectionInline" class="images-section-inline">
                     <div class="images-header">
                         <div class="images-title">📷 现场记录</div>
                         <button class="image-upload-btn" onclick="document.getElementById('imageInput').click()">
                             <span>+</span> 上传
                         </button>
                     </div>
-                    <div id="imageGridInline" class="image-grid-inline"></div>
+                    <div id="imageGridInline" class="image-grid-inline">${renderImageGridHtml(images)}</div>
                 </div>
             `;
 
             // 显示详情遮挡层
             html += `
                 <div id="detailOverlay" class="detail-overlay" onclick="showDetail()">
-                    <span class="overlay-icon">👁️</span>
                     <div class="overlay-text">显示详情</div>
                     <div class="overlay-hint">点击查看释义、词组、例句</div>
                 </div>
@@ -1514,9 +1515,7 @@
         }
 
         // 初始化
-        loadWord().then(() => {
-            loadImages();
-        });
+        loadWord();
         initNavigation();
 
         // ==================== 图片相关功能 ====================
@@ -1551,17 +1550,12 @@
             }
         }
 
-        // 渲染图片网格
-        function renderImageGrid() {
-            const grid = document.getElementById('imageGridInline');
-            if (!grid) return;
-
-            if (currentImages.length === 0) {
-                grid.innerHTML = '<div class="image-empty">暂无图片，点击上方按钮上传记录</div>';
-                return;
+        // 生成图片网格 HTML（用于初始渲染，避免二次请求）
+        function renderImageGridHtml(images) {
+            if (!images || images.length === 0) {
+                return '<div class="image-empty">暂无图片，点击上方按钮上传记录</div>';
             }
-
-            grid.innerHTML = currentImages.map((img, index) => `
+            return images.map((img, index) => `
                 <div class="image-item" onclick="openLightbox(${index})">
                     <img src="/api/word/${encodeURIComponent(word)}/images/${img.filename}" alt="${img.original_name}" loading="lazy">
                     <div class="image-item-overlay">
@@ -1570,6 +1564,13 @@
                     <button class="image-item-delete" onclick="deleteImage('${img.filename}', event)" title="删除图片">✕</button>
                 </div>
             `).join('');
+        }
+
+        // 渲染图片网格到 DOM（上传/删除后刷新用）
+        function renderImageGrid() {
+            const grid = document.getElementById('imageGridInline');
+            if (!grid) return;
+            grid.innerHTML = renderImageGridHtml(currentImages);
         }
 
         // 处理图片上传
