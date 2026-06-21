@@ -199,6 +199,84 @@
             text-align: right;
         }
 
+        .sentence-tags {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 12px;
+            background: #e8e5ff;
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .tag-delete {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border: none;
+            background: transparent;
+            color: #999;
+            font-size: 0.7rem;
+            cursor: pointer;
+            border-radius: 50%;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .tag-delete:hover {
+            background: rgba(0,0,0,0.1);
+            color: #c62828;
+        }
+
+        .tag-add-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px dashed #ccc;
+            background: transparent;
+            color: #999;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tag-add-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .tag-input-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tag-input {
+            width: 110px;
+            padding: 3px 8px;
+            border: 1px solid #667eea;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            outline: none;
+            background: #f8f7ff;
+        }
+
         .word-link {
             color: #e67e22;
             border-bottom: 1px dashed #e67e22;
@@ -512,6 +590,21 @@
                 `;
             }
 
+            // Tags
+            const tags = data.tags || [];
+            const tagsHtml = tags.map(t => `
+                <span class="tag">
+                    ${t}
+                    <button class="tag-delete" onclick="deleteTag('${t.replace(/'/g, "\\'")}', this)" title="删除 tag">×</button>
+                </span>
+            `).join('');
+            html += `
+                <div class="sentence-tags">
+                    ${tagsHtml}
+                    <button class="tag-add-btn" onclick="showTagInput(this)" title="添加 tag">+</button>
+                </div>
+            `;
+
             document.getElementById('content').innerHTML = html;
             document.getElementById('content').style.display = 'block';
         }
@@ -520,6 +613,72 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+
+        // Tag 管理
+        function showTagInput(btn) {
+            if (btn.parentElement.querySelector('.tag-input-wrapper')) return;
+
+            const wrapper = document.createElement('span');
+            wrapper.className = 'tag-input-wrapper';
+            wrapper.innerHTML = `<input class="tag-input" type="text" placeholder="输入 tag" />`;
+
+            btn.parentElement.insertBefore(wrapper, btn);
+            const input = wrapper.querySelector('.tag-input');
+            input.focus();
+
+            input.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const tag = input.value.trim();
+                    if (tag) {
+                        await addTag(tag, btn);
+                    }
+                    wrapper.remove();
+                } else if (e.key === 'Escape') {
+                    wrapper.remove();
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => wrapper.remove(), 150);
+            });
+        }
+
+        async function addTag(tag, btn) {
+            try {
+                const res = await fetch(`/api/sentence/${encodeURIComponent(dirName)}/tag`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag })
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'tag';
+                    tagSpan.innerHTML = `
+                        ${tag}
+                        <button class="tag-delete" onclick="deleteTag('${tag.replace(/'/g, "\\'")}', this)" title="删除 tag">×</button>
+                    `;
+                    btn.parentElement.insertBefore(tagSpan, btn);
+                }
+            } catch (err) {
+                console.error('添加 tag 失败:', err);
+            }
+        }
+
+        async function deleteTag(tag, btn) {
+            try {
+                const res = await fetch(`/api/sentence/${encodeURIComponent(dirName)}/tag/${encodeURIComponent(tag)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    btn.parentElement.remove();
+                }
+            } catch (err) {
+                console.error('删除 tag 失败:', err);
+            }
         }
 
         // 播放音频

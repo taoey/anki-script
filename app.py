@@ -391,11 +391,13 @@ def get_sentences_list():
             # 读取 meta.json 获取时间戳
             created_at = 0
             text = ""
+            tags = []
             if os.path.exists(meta_path):
                 with open(meta_path, 'r', encoding='utf-8') as f:
                     meta = json.load(f)
                     created_at = meta.get("created_at", 0)
                     text = meta.get("text", "")
+                    tags = meta.get("tags", [])
             else:
                 created_at = os.path.getmtime(json_path)
                 try:
@@ -417,7 +419,8 @@ def get_sentences_list():
                 "dir_name": dir_name,
                 "text": text,
                 "key_word_count": len(data.get("key_words", [])),
-                "created_at": created_at
+                "created_at": created_at,
+                "tags": tags
             })
 
         # 按时间戳倒序排序
@@ -479,8 +482,73 @@ def get_sentence_detail(dir_name):
                 data['created_at'] = meta.get('created_at', 0)
                 data['created_at_str'] = meta.get('created_at_str', '')
                 data['type'] = 'sentence'
+                data['tags'] = meta.get('tags', [])
 
         return jsonify({"status": "ok", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/sentence/<dir_name>/tag", methods=["POST"])
+@require_auth
+def add_sentence_tag(dir_name):
+    """为句子添加 tag"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_path = os.path.join(sentences_dir, dir_name)
+    meta_path = os.path.join(sentence_path, "meta.json")
+
+    if not os.path.exists(sentence_path):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    try:
+        tag = request.json.get("tag", "").strip()
+        if not tag:
+            return jsonify({"status": "error", "message": "tag 不能为空"}), 400
+
+        # 读取现有 meta.json
+        meta = {}
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+        tags = meta.get("tags", [])
+        if tag not in tags:
+            tags.append(tag)
+            meta["tags"] = tags
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "data": {"tags": tags}})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/sentence/<dir_name>/tag/<tag>", methods=["DELETE"])
+@require_auth
+def delete_sentence_tag(dir_name, tag):
+    """删除句子的 tag"""
+    sentences_dir = os.path.join(DATA_DIR, "sentences")
+    sentence_path = os.path.join(sentences_dir, dir_name)
+    meta_path = os.path.join(sentence_path, "meta.json")
+
+    if not os.path.exists(sentence_path):
+        return jsonify({"status": "error", "message": "句子不存在"}), 404
+
+    try:
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+            tags = meta.get("tags", [])
+            if tag in tags:
+                tags.remove(tag)
+                meta["tags"] = tags
+                with open(meta_path, 'w', encoding='utf-8') as f:
+                    json.dump(meta, f, ensure_ascii=False, indent=2)
+
+            return jsonify({"status": "ok", "data": {"tags": tags}})
+        else:
+            return jsonify({"status": "ok", "data": {"tags": []}})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
