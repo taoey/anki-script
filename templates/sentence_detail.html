@@ -126,6 +126,21 @@
             color: #667eea;
         }
 
+        .delete-btn {
+            padding: 6px 12px;
+            background: #ff5252;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
             50% { box-shadow: 0 0 0 8px rgba(102, 126, 234, 0); }
@@ -468,6 +483,7 @@
                 <a href="/words" class="nav-btn">📖 单词列表</a>
                 <a href="/sentences" class="nav-btn">📝 句子列表</a>
                 <a href="/" class="nav-btn">🔍 查询</a>
+                <button class="delete-btn" id="deleteBtn" onclick="deleteSentence()" title="删除句子" style="display:none;">🗑️ 删除</button>
             </div>
         </div>
 
@@ -589,8 +605,9 @@
         function renderSentence(data) {
             const audioKey = encodeURIComponent(dirName);
 
-            // 显示顶部播放按钮
+            // 显示顶部播放按钮和删除按钮
             document.getElementById('headerPlayBtn').style.display = 'inline-flex';
+            document.getElementById('deleteBtn').style.display = 'inline-block';
 
             let html = `
                 <div class="sentence-header">
@@ -746,6 +763,26 @@
                 }
             } catch (err) {
                 console.error('删除 tag 失败:', err);
+            }
+        }
+
+        async function deleteSentence() {
+            if (!confirm('确定要删除这个句子吗？')) return;
+
+            try {
+                const res = await fetch(`/api/sentence/${encodeURIComponent(dirName)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    // 跳转到句子列表页
+                    window.location.href = '/sentences';
+                } else {
+                    alert('删除失败: ' + (data.message || '未知错误'));
+                }
+            } catch (err) {
+                console.error('删除句子失败:', err);
+                alert('删除失败，请重试');
             }
         }
 
