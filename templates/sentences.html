@@ -199,6 +199,57 @@
             color: #bbb;
         }
 
+        .tag-filter-bar {
+            background: rgba(255,255,255,0.15);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .tag-filter-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .tag-filter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-filter-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 14px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .tag-filter-item:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .tag-filter-item.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+            font-weight: 600;
+        }
+
+        .tag-filter-item .tag-count {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
         .word-link {
             color: #e67e22;
             border-bottom: 1px dashed #e67e22;
@@ -271,6 +322,11 @@
 
         <div id="stats" class="stats" style="display:none;"></div>
 
+        <div id="tagFilterBar" class="tag-filter-bar">
+            <div class="tag-filter-label">🏷️ 按标签筛选</div>
+            <div id="tagFilterList" class="tag-filter-list"></div>
+        </div>
+
         <div id="loading" class="loading">加载中...</div>
 
         <div id="sentenceList" class="sentence-list" style="display:none;"></div>
@@ -282,6 +338,10 @@
     </div>
 
     <script>
+        // 全局数据
+        let allSentences = [];
+        let activeTag = null;
+
         // 单词高亮相关
         let existingWords = new Set();
         async function loadExistingWords() {
@@ -323,13 +383,53 @@
                 document.getElementById('loading').style.display = 'none';
 
                 if (data.status === 'ok' && data.data.length > 0) {
-                    renderSentences(data.data);
+                    allSentences = data.data;
+                    buildTagFilter(allSentences);
+                    renderSentences(allSentences);
                 } else {
                     document.getElementById('empty').style.display = 'block';
                 }
             } catch (err) {
                 document.getElementById('loading').textContent = '加载失败，请重试';
             }
+        }
+
+        function buildTagFilter(sentences) {
+            const tagCounts = {};
+            sentences.forEach(s => {
+                (s.tags || []).forEach(t => {
+                    tagCounts[t] = (tagCounts[t] || 0) + 1;
+                });
+            });
+
+            const tags = Object.keys(tagCounts).sort();
+            if (tags.length === 0) return;
+
+            const filterBar = document.getElementById('tagFilterBar');
+            const filterList = document.getElementById('tagFilterList');
+            filterList.innerHTML = tags.map(t =>
+                `<span class="tag-filter-item" data-tag="${t}" onclick="toggleTagFilter('${t.replace(/'/g, "\\'")}')">${t} <span class="tag-count">(${tagCounts[t]})</span></span>`
+            ).join('');
+            filterBar.style.display = 'block';
+        }
+
+        function toggleTagFilter(tag) {
+            if (activeTag === tag) {
+                activeTag = null;
+            } else {
+                activeTag = tag;
+            }
+
+            // 更新按钮样式
+            document.querySelectorAll('.tag-filter-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.tag === activeTag);
+            });
+
+            // 过滤并渲染
+            const filtered = activeTag
+                ? allSentences.filter(s => (s.tags || []).includes(activeTag))
+                : allSentences;
+            renderSentences(filtered);
         }
 
         function renderSentences(sentences) {
@@ -414,6 +514,13 @@
                         <button class="tag-delete" onclick="event.preventDefault(); event.stopPropagation(); deleteTag('${dirName}', '${tag.replace(/'/g, "\\'")}', this)" title="删除 tag">×</button>
                     `;
                     btn.parentElement.insertBefore(tagSpan, btn);
+                    // 同步更新本地数据并刷新筛选栏
+                    const sentence = allSentences.find(s => s.dir_name === dirName);
+                    if (sentence && !(sentence.tags || []).includes(tag)) {
+                        sentence.tags = sentence.tags || [];
+                        sentence.tags.push(tag);
+                    }
+                    buildTagFilter(allSentences);
                 }
             } catch (err) {
                 console.error('添加 tag 失败:', err);
@@ -428,6 +535,12 @@
                 const data = await res.json();
                 if (data.status === 'ok') {
                     btn.parentElement.remove();
+                    // 同步更新本地数据并刷新筛选栏
+                    const sentence = allSentences.find(s => s.dir_name === dirName);
+                    if (sentence && sentence.tags) {
+                        sentence.tags = sentence.tags.filter(t => t !== tag);
+                    }
+                    buildTagFilter(allSentences);
                 }
             } catch (err) {
                 console.error('删除 tag 失败:', err);
