@@ -273,7 +273,7 @@ RULES:
 5. Use IPA format for phonetic transcription
 6. Include mnemonic object with: etymology (词根词缀/词源), association (谐音/联想记忆), tips (记忆技巧)
 7. Mnemonic should be concise and helpful for Chinese learners, in Chinese
-8. Phrases MUST be sorted by usage frequency (high to low), each phrase must include frequency field: "high", "medium", or "low""""
+8. Phrases MUST be sorted by usage frequency (high to low), each phrase must include frequency field: "high", "medium", or "low\""""
 
 
 def explain_word(word, max_retries=3):
